@@ -1,4 +1,4 @@
-const APP_VERSION = '0.1.0';
+const APP_VERSION = '0.1.1';
 const DB_NAME = 'BayesianSymptomTracker';
 const DB_VERSION = 1;
 const STORE = 'kv';
@@ -34,7 +34,7 @@ function defaultState(){
     schemaVersion:1,
     profile:{name:'My cat',species:'cat',sex:'unknown',birthDate:'',weight:'',vetName:'',vetPhone:''},
     episodes:[episode], observations:[],
-    settings:{activeEpisodeId:episode.id,modelPack:'cat-general-v0.1',reportModel:true,reportUrgency:true,reportNotes:true},
+    settings:{activeEpisodeId:episode.id,modelPack:'cat-general-v0.2',reportModel:true,reportUrgency:true,reportNotes:true},
     createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
   };
 }
@@ -69,10 +69,16 @@ function distributionAfterVirtual(baseObs,fid,present){
   return infer([...baseObs,{findingId:fid,present,severity:'medium',time:new Date().toISOString(),episodeId:state.settings.activeEpisodeId,id:'virtual'}]);
 }
 function nextBestQuestion(){
-  const obs=episodeObservations(); const used=new Set(obs.map(o=>o.findingId)); const base=infer(obs); const h0=entropy(base);
+  const obs=episodeObservations();
+  const used=new Set(obs.map(o=>o.findingId));
+  const usedStateGroups=new Set(obs.map(o=>finding(o.findingId)?.stateGroup).filter(Boolean));
+  const base=infer(obs); const h0=entropy(base);
   let best=null;
   for(const f of knowledge.findings){
-    if(used.has(f.id)) continue;
+    // State-group members are mutually exclusive at a point in time. Once a state
+    // has been recorded, don't ask a contradictory sibling as the next-best prompt.
+    // Users can still manually log a later state change from the observation form.
+    if(used.has(f.id) || (f.stateGroup && usedStateGroups.has(f.stateGroup))) continue;
     const py=base.reduce((s,h)=>s+h.score*(knowledge.likelihoods[h.id]?.[f.id] ?? .5),0);
     const y=distributionAfterVirtual(obs,f.id,true), n=distributionAfterVirtual(obs,f.id,false);
     const expected=py*entropy(y)+(1-py)*entropy(n);
@@ -208,7 +214,7 @@ function reportHtml(){
 function renderSettingsPage(){
   return `<div class="grid two"><div class="card"><div class="card-head"><div><span class="eyebrow">PATIENT</span><h2>Profile</h2></div></div><div class="card-pad"><form id="profileForm"><div class="form-row"><div class="field"><label>Name</label><input name="name" value="${escapeHtml(state.profile.name)}"></div><div class="field"><label>Sex</label><select name="sex"><option value="unknown" ${state.profile.sex==='unknown'?'selected':''}>Unknown / not set</option><option value="female" ${state.profile.sex==='female'?'selected':''}>Female</option><option value="male" ${state.profile.sex==='male'?'selected':''}>Male</option></select></div></div><div class="form-row"><div class="field"><label>Birth date</label><input type="date" name="birthDate" value="${escapeHtml(state.profile.birthDate||'')}"></div><div class="field"><label>Weight</label><input name="weight" placeholder="e.g., 10.4 lb" value="${escapeHtml(state.profile.weight||'')}"></div></div><div class="form-row"><div class="field"><label>Veterinarian</label><input name="vetName" value="${escapeHtml(state.profile.vetName||'')}"></div><div class="field"><label>Vet phone</label><input name="vetPhone" value="${escapeHtml(state.profile.vetPhone||'')}"></div></div><div class="form-actions"><button class="primary">Save profile</button></div></form></div></div>
   <div class="card"><div class="card-head"><div><span class="eyebrow">DATA</span><h2>Backup & portability</h2></div></div><div class="card-pad"><p>Your data is stored in IndexedDB in this browser. Export backups regularly, especially before clearing browser data.</p><div class="form-actions" style="justify-content:flex-start"><button class="ghost" data-export>Export JSON</button><label class="ghost" style="cursor:pointer">Import JSON<input type="file" id="importFile" accept="application/json" hidden></label><button class="secondary" data-demo>Load demo episode</button></div><div class="divider"></div><button class="danger" data-reset>Reset local data</button></div></div></div>
-  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">KNOWLEDGE PACK</span><h2>${escapeHtml(knowledge.packId)}</h2></div><span class="chip">${escapeHtml(knowledge.modelStatus)}</span></div><div class="card-pad"><p>${escapeHtml(knowledge.modelNotice)}</p><h3>Urgency-rule provenance</h3><ul class="source-list">${knowledge.sources.map(s=>`<li><a href="${s.url}" target="_blank" rel="noreferrer">${escapeHtml(s.name)}</a> — ${escapeHtml(s.role)}</li>`).join('')}</ul><p class="helper">The cited sources support the emergency red-flag examples. They do not validate the Bayesian priors or likelihood values in this experimental knowledge pack.</p></div></div>`;
+  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">KNOWLEDGE PACK</span><h2>${escapeHtml(knowledge.packId)}</h2></div><span class="chip">${escapeHtml(knowledge.modelStatus)}</span></div><div class="card-pad"><p>${escapeHtml(knowledge.modelNotice)}</p><h3>Urgency-rule provenance</h3><ul class="source-list">${knowledge.sources.map(s=>`<li><a href="${s.url}" target="_blank" rel="noreferrer">${escapeHtml(s.name)}</a> — ${escapeHtml(s.role)}</li>`).join('')}</ul><p class="helper">The cited sources support emergency red-flag examples and the importance of tracking directional changes such as increased/decreased appetite, thirst, and urination. They do not validate the numeric Bayesian priors or likelihood values in this experimental knowledge pack.</p></div></div>`;
 }
 
 function bindLogForm(form){
@@ -274,8 +280,12 @@ function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.remove('hi
 
 async function init(){
   try{
-    knowledge=await fetch('./data/cat-knowledge-v0.1.json').then(r=>{if(!r.ok)throw new Error('Knowledge pack failed to load');return r.json();});
-    state=await dbGet('state') || defaultState(); if(!await dbGet('state')) await save();
+    knowledge=await fetch('./data/cat-knowledge-v0.2.json').then(r=>{if(!r.ok)throw new Error('Knowledge pack failed to load');return r.json();});
+    state=await dbGet('state') || defaultState();
+    const hadState=await dbGet('state');
+    state.settings ||= {};
+    state.settings.modelPack=knowledge.packId;
+    if(!hadState || hadState.settings?.modelPack!==knowledge.packId) await save();
     updateEpisodeButton(); render();
     $$('#nav button').forEach(b=>b.onclick=()=>setView(b.dataset.view));
     $('#quickLog').onclick=()=>openObservationModal(); $('#episodeButton').onclick=()=>setView('timeline');

@@ -1,14 +1,14 @@
-# Validation — v0.1.0
+# Validation — v0.1.1
 
 Validated 2026-09-26.
 
 ## Static checks
 
 - `node --check app.js` — pass
-- JSON parse: `data/cat-knowledge-v0.1.json` — pass
+- JSON parse: `data/cat-knowledge-v0.2.json` — pass
 - JSON parse: `manifest.webmanifest` — pass
 - Local HTTP request for `index.html` — HTTP 200
-- Local HTTP request and parse for knowledge pack — pass
+- Local HTTP request for `data/cat-knowledge-v0.2.json` — HTTP 200 and valid JSON
 
 ## Model regression checks
 
@@ -31,7 +31,7 @@ Covered:
 
 ## Browser interaction smoke test
 
-A headless Chromium test harness exercised the real application UI code with in-memory persistence and the packaged knowledge data.
+The v0.1.0 headless-browser interaction test covered the application shell, persistence flow, urgency behavior, timeline, report, and provenance rendering. For v0.1.1, the container Chromium process did not terminate cleanly during the rerun because of an environment-level D-Bus/headless-browser issue, so this release is not claiming a fresh browser automation pass. Static HTTP loading, JavaScript syntax, JSON integrity, and the expanded model regression suite all passed.
 
 Covered:
 
@@ -52,3 +52,12 @@ The desktop dashboard was rendered and visually inspected at 1440×1100. See `do
 ## Scope limitation
 
 The included Bayesian knowledge pack is an experimental heuristic. Validation above verifies software behavior and internal consistency; it is **not clinical validation** of the Bayesian priors or likelihood values.
+
+
+## v0.1.1 regression additions
+
+- Verified increased appetite exists as a first-class finding.
+- Verified increased and reduced urine volume exist independently of frequent small urinations.
+- Verified appetite and urine-volume state groups are internally consistent.
+- Verified the directional metabolic pattern test ranks the broad metabolic/endocrine hypothesis first for the synthetic increased-appetite + increased-urine + increased-thirst + weight-loss combination.
+- Verified legacy finding IDs remain present for existing exported/local records.

@@ -15,7 +15,7 @@ A GitHub Pages–ready, local-first symptom and observation tracker for cats.
 
 ## Important limitation
 
-The included `cat-general-v0.1` Bayesian knowledge pack is a deliberately labeled, **non-clinically-validated heuristic model**. Its percentages are normalized relative scores, not disease probabilities and not diagnoses. The emergency/urgent rules are separate from the Bayesian model and cite veterinary sources in the app.
+The included `cat-general-v0.2` Bayesian knowledge pack is a deliberately labeled, **non-clinically-validated heuristic model**. Its percentages are normalized relative scores, not disease probabilities and not diagnoses. The emergency/urgent rules are separate from the Bayesian model and cite veterinary sources in the app.
 
 ## Run locally
 
@@ -36,7 +36,7 @@ Upload the contents of this directory to a repository, enable **Settings → Pag
 - `index.html` — static application shell
 - `styles.css` — responsive UI and print styles
 - `app.js` — IndexedDB persistence, episode management, inference, information-value calculation, reporting
-- `data/cat-knowledge-v0.1.json` — hypotheses, findings, likelihood assumptions, urgency rules, provenance
+- `data/cat-knowledge-v0.2.json` — hypotheses, findings, likelihood assumptions, urgency rules, provenance
 - `service-worker.js` — offline cache
 - `manifest.webmanifest` — installable web-app metadata
 
@@ -51,3 +51,8 @@ node tests/smoke.mjs
 ```
 
 See [`VALIDATION.md`](VALIDATION.md) for the current software validation record. A reviewed dashboard capture is in `docs/screenshots/dashboard.png`.
+
+
+## v0.1.1 directional-state update
+
+Added increased appetite, increased urine volume, and reduced urine volume; separated urine volume from frequent-small-voiding behavior; added mutually exclusive state groups for information-value prompts; and expanded the heuristic broad-pattern model with metabolic/endocrine and renal/hydration categories. Existing observation IDs remain compatible.
