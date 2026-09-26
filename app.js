@@ -1,4 +1,4 @@
-const APP_VERSION = '0.1.1';
+const APP_VERSION = '0.2.0';
 const DB_NAME = 'BayesianSymptomTracker';
 const DB_VERSION = 1;
 const STORE = 'kv';
@@ -34,7 +34,7 @@ function defaultState(){
     schemaVersion:1,
     profile:{name:'My cat',species:'cat',sex:'unknown',birthDate:'',weight:'',vetName:'',vetPhone:''},
     episodes:[episode], observations:[],
-    settings:{activeEpisodeId:episode.id,modelPack:'cat-general-v0.2',reportModel:true,reportUrgency:true,reportNotes:true},
+    settings:{activeEpisodeId:episode.id,modelPack:'cat-practical-differentials-v0.3',reportModel:true,reportUrgency:true,reportNotes:true},
     createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
   };
 }
@@ -63,6 +63,11 @@ function infer(observations=episodeObservations()){
   const exp=Object.fromEntries(Object.entries(logs).map(([k,v])=>[k,Math.exp(v-max)]));
   const total=Object.values(exp).reduce((a,b)=>a+b,0)||1;
   return knowledge.hypotheses.map(h=>({ ...h, score:exp[h.id]/total, log:logs[h.id]})).sort((a,b)=>b.score-a.score);
+}
+function familyScores(model=infer()){
+  const totals=new Map();
+  model.forEach(h=>totals.set(h.family||'Other',(totals.get(h.family||'Other')||0)+h.score));
+  return [...totals.entries()].map(([label,score])=>({label,score})).sort((a,b)=>b.score-a.score);
 }
 function entropy(dist){ return -dist.reduce((s,x)=>s+(x.score>0?x.score*Math.log2(x.score):0),0); }
 function distributionAfterVirtual(baseObs,fid,present){
@@ -146,8 +151,8 @@ function renderDashboard(){
     </div>
     <div class="grid two section-gap">
       <div class="card">
-        <div class="card-head"><div><span class="eyebrow">RELATIVE PATTERN CONSISTENCY</span><h2>Current model state</h2></div><button class="mini" data-viewgo="model">Inspect model</button></div>
-        <div class="score-list">${renderScores(model.slice(0,6))}</div>
+        <div class="card-head"><div><span class="eyebrow">RELATIVE PATTERN CONSISTENCY</span><h2>Current condition matches</h2></div><button class="mini" data-viewgo="model">Inspect model</button></div>
+        <div class="score-list">${obs.length?renderScores(model.slice(0,8)):`<div class="empty">No condition ranking yet. Add observations to begin.</div>`}</div>
       </div>
       <div class="card">
         <div class="card-head"><div><span class="eyebrow">INFORMATION VALUE</span><h2>Useful next observation</h2></div></div>
@@ -156,7 +161,7 @@ function renderDashboard(){
     </div>
     <div class="grid two section-gap">
       <div class="card"><div class="card-head"><div><span class="eyebrow">EPISODE</span><h2>Recent timeline</h2></div><button class="mini" data-viewgo="timeline">View all</button></div>${renderTimeline(obs.slice(-6).reverse())}</div>
-      <div class="card"><div class="card-head"><div><span class="eyebrow">MODEL NOTICE</span><h2>What the percentages mean</h2></div></div><div class="card-pad"><p style="margin-top:0">The percentages are normalized Bayesian <strong>pattern-consistency scores</strong> produced by a heuristic knowledge pack. They are not estimates of the probability that your cat has a disease.</p><p>The model is intentionally transparent: observations, priors and likelihood assumptions are inspectable, and urgency warnings are calculated separately.</p><div class="notice warning">The current cat knowledge pack is <strong>not clinically validated</strong>. Use it to organize observations for discussion with a veterinarian, not to diagnose or rule out disease.</div></div></div>
+      <div class="card"><div class="card-head"><div><span class="eyebrow">MODEL NOTICE</span><h2>What the percentages mean</h2></div></div><div class="card-pad"><p style="margin-top:0">The percentages are normalized Bayesian <strong>pattern-consistency scores</strong> across the condition library. They are not estimates of the probability that your cat has a disease.</p><p>The model is intentionally transparent: observations, priors and likelihood assumptions are inspectable, and urgency warnings are calculated separately.</p><div class="notice warning">The current feline differential pack is <strong>not clinically validated</strong>. It includes an explicit Other / unmodeled reserve because even a large library cannot rule out diseases it does not represent.</div></div></div>
     </div>`;
 }
 function renderUrgency(alerts){
@@ -164,7 +169,10 @@ function renderUrgency(alerts){
   return `<div class="notice ${cls}"><strong>${top.level==='emergency'?'Emergency flag':'Urgent flag'}: ${escapeHtml(top.title)}</strong> ${escapeHtml(top.message)}${alerts.length>1?` <span class="muted">(${alerts.length-1} additional rule${alerts.length>2?'s':''} active.)</span>`:''}</div>`;
 }
 function renderScores(model){
-  return model.map((h,i)=>`<div class="score-row"><div class="score-label"><strong>${escapeHtml(h.label)}</strong><small>${i===0?'highest current score':'relative score'}</small></div><div class="bar"><span style="width:${Math.max(1,h.score*100)}%"></span></div><div class="score-number">${(h.score*100).toFixed(1)}%</div></div>`).join('');
+  return model.map((h,i)=>`<div class="score-row"><div class="score-label"><strong>${escapeHtml(h.label)}</strong><small>${h.family?escapeHtml(h.family)+' · ':''}${i===0?'highest current score':'relative score'}</small></div><div class="bar"><span style="width:${Math.max(1,h.score*100)}%"></span></div><div class="score-number">${(h.score*100).toFixed(1)}%</div></div>`).join('');
+}
+function renderFamilyScores(families){
+  return families.map((f,i)=>`<div class="score-row"><div class="score-label"><strong>${escapeHtml(f.label)}</strong><small>${i===0?'highest current family':'family aggregate'}</small></div><div class="bar"><span style="width:${Math.max(1,f.score*100)}%"></span></div><div class="score-number">${(f.score*100).toFixed(1)}%</div></div>`).join('');
 }
 function renderTimeline(obs){
   if(!obs.length) return `<div class="empty"><div class="big">∅</div>No observations logged yet.</div>`;
@@ -193,11 +201,16 @@ function renderTimelinePage(){
   return `<div class="card"><div class="card-head"><div><span class="eyebrow">EPISODES</span><h2>${escapeHtml(activeEpisode().title)}</h2></div><button class="primary" data-new-episode>＋ New episode</button></div><div class="card-pad"><div class="episode-strip">${eps.map(e=>`<button class="episode-pill ${e.id===state.settings.activeEpisodeId?'active':''}" data-episode="${e.id}">${escapeHtml(e.title)} · ${fmtDate(e.start)}</button>`).join('')}</div></div>${renderTimeline(obs)}</div>`;
 }
 function renderModelPage(){
-  const model=infer(); const top=model[0]; const obs=[...episodeObservations()].reverse();
-  return `<div class="notice warning"><strong>Non-validated model.</strong> These are relative pattern-consistency scores from a heuristic Bayesian knowledge pack, not disease probabilities.</div>
-  <div class="grid two section-gap"><div class="card"><div class="card-head"><div><span class="eyebrow">POSTERIOR STATE</span><h2>All hypothesis scores</h2></div></div><div class="score-list">${renderScores(model)}</div></div>
-  <div class="card"><div class="card-head"><div><span class="eyebrow">TOP CURRENT PATTERN</span><h2>${escapeHtml(top.label)}</h2></div><span class="chip accent">${(top.score*100).toFixed(1)}%</span></div><div class="card-pad"><p>${escapeHtml(top.description)}</p><div class="divider"></div><h3>Evidence contribution</h3></div><div class="evidence-list">${obs.length?obs.map(o=>{const imp=evidenceImpact(o,top.id);const f=finding(o.findingId);return `<div class="evidence-item"><div><strong>${o.present===false?'Absence of ':''}${escapeHtml(f?.label||o.findingId)}</strong><small>${fmtDateTime(o.time)}</small></div><div class="impact ${imp>=0?'up':'down'}">${imp>=0?'▲':'▼'} ${Math.abs(imp*100).toFixed(1)} pt</div></div>`}).join(''):'<span class="muted">No evidence logged.</span>'}</div></div></div>
-  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">TRANSPARENCY</span><h2>Model assumptions</h2></div></div><div class="card-pad"><p>The engine treats logged findings as conditionally independent given each broad hypothesis. Repeated identical findings are down-weighted to reduce runaway double-counting. Priors and likelihoods are stored in a versioned JSON knowledge pack.</p><p>This is useful for transparent experimentation and structured tracking, but the assumptions are too simple for clinical diagnosis. A future validated pack could replace the current heuristic values without changing your raw observation history.</p><button class="ghost" data-viewgo="settings">View provenance & sources</button></div></div>`;
+  const model=infer(); const top=model[0]; const obs=[...episodeObservations()].reverse(); const families=familyScores(model);
+  const byFamily=new Map();
+  model.forEach(h=>{const fam=h.family||'Other'; if(!byFamily.has(fam)) byFamily.set(fam,[]); byFamily.get(fam).push(h);});
+  const familySections=families.map(f=>`<details class="model-family"><summary><strong>${escapeHtml(f.label)}</strong><span>${(f.score*100).toFixed(1)}% family aggregate</span></summary><div class="score-list">${renderScores(byFamily.get(f.label)||[])}</div></details>`).join('');
+  return `<div class="notice warning"><strong>Experimental model.</strong> These are relative pattern-consistency scores from a non-validated Bayesian knowledge pack, not disease probabilities, diagnoses, or rule-outs.</div>
+  <div class="grid two section-gap"><div class="card"><div class="card-head"><div><span class="eyebrow">TOP CONDITION MATCHES</span><h2>Current differential pattern</h2></div></div><div class="score-list">${renderScores(model.slice(0,15))}</div></div>
+  <div class="card"><div class="card-head"><div><span class="eyebrow">SYSTEM-LEVEL VIEW</span><h2>Condition-family aggregates</h2></div></div><div class="score-list">${renderFamilyScores(families)}</div></div></div>
+  ${obs.length?`<div class="card section-gap"><div class="card-head"><div><span class="eyebrow">TOP CURRENT MATCH</span><h2>${escapeHtml(top.label)}</h2><small>${escapeHtml(top.family||'')}</small></div><span class="chip accent">${(top.score*100).toFixed(1)}%</span></div><div class="card-pad"><p>${escapeHtml(top.description)}</p><div class="divider"></div><h3>Evidence contribution</h3></div><div class="evidence-list">${obs.map(o=>{const imp=evidenceImpact(o,top.id);const f=finding(o.findingId);return `<div class="evidence-item"><div><strong>${o.present===false?'Absence of ':''}${escapeHtml(f?.label||o.findingId)}</strong><small>${fmtDateTime(o.time)}</small></div><div class="impact ${imp>=0?'up':'down'}">${imp>=0?'▲':'▼'} ${Math.abs(imp*100).toFixed(1)} pt</div></div>`}).join('')}</div></div>`:`<div class="notice section-gap"><strong>No observations yet.</strong> The condition scores below are only baseline model weights until evidence is logged.</div>`}
+  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">CONDITION LIBRARY</span><h2>Browse all ${knowledge.hypotheses.length} hypotheses</h2></div><span class="chip">${knowledge.coverage?.namedConditionCount||knowledge.hypotheses.length} named</span></div><div class="card-pad"><p>${escapeHtml(knowledge.coverage?.scope||'')}</p>${familySections}</div></div>
+  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">TRANSPARENCY</span><h2>Model assumptions</h2></div></div><div class="card-pad"><p>The engine treats logged findings as conditionally independent given each condition hypothesis. Repeated identical findings are down-weighted to reduce runaway double-counting. Numeric likelihoods are heuristic pattern weights rather than measured diagnostic sensitivity or specificity.</p><p>${escapeHtml(knowledge.coverage?.priorPolicy||'Priors are stored in the versioned knowledge pack.')}</p><p>The explicit <strong>Other / unmodeled condition</strong> hypothesis reserves model mass for conditions outside this library. That does not make the remainder exhaustive.</p><button class="ghost" data-viewgo="settings">View coverage & provenance</button></div></div>`;
 }
 function renderReportsPage(){
   const opts=state.settings;
@@ -208,13 +221,13 @@ function reportHtml(){
   return `<article class="report-paper"><h2>Bayesian Symptom Tracker — Episode Report</h2><p class="report-muted">Generated ${fmtDateTime(new Date().toISOString())} · App v${APP_VERSION} · Knowledge pack ${escapeHtml(knowledge.packId)}</p><table><tr><th>Patient</th><td>${escapeHtml(state.profile.name)}</td><th>Species</th><td>Cat</td></tr><tr><th>Sex</th><td>${escapeHtml(state.profile.sex)}</td><th>Weight</th><td>${escapeHtml(state.profile.weight||'—')}</td></tr><tr><th>Episode</th><td>${escapeHtml(ep.title)}</td><th>Started</th><td>${fmtDateTime(ep.start)}</td></tr></table>
   <h3>Observation timeline</h3><table><thead><tr><th>Time</th><th>Finding</th><th>Intensity</th>${state.settings.reportNotes?'<th>Notes</th>':''}</tr></thead><tbody>${obs.map(o=>`<tr><td>${fmtDateTime(o.time)}</td><td>${o.present===false?'Not observed: ':''}${escapeHtml(finding(o.findingId)?.label||o.findingId)}</td><td>${escapeHtml(o.severity)}</td>${state.settings.reportNotes?`<td>${escapeHtml(o.notes||'')}</td>`:''}</tr>`).join('')||'<tr><td colspan="4">No observations</td></tr>'}</tbody></table>
   ${state.settings.reportUrgency?`<h3>Current deterministic urgency flags</h3>${alerts.length?`<ul>${alerts.map(a=>`<li><strong>${escapeHtml(a.title)}:</strong> ${escapeHtml(a.message)}</li>`).join('')}</ul>`:'<p>No active urgency rules at report generation time.</p>'}`:''}
-  ${state.settings.reportModel?`<h3>Relative pattern-consistency scores</h3><table><thead><tr><th>Pattern</th><th>Score</th></tr></thead><tbody>${model.map(h=>`<tr><td>${escapeHtml(h.label)}</td><td>${(h.score*100).toFixed(1)}%</td></tr>`).join('')}</tbody></table><p><strong>Important:</strong> These normalized Bayesian scores are generated by a non-validated heuristic model and are not disease probabilities or diagnoses.</p>`:''}
+  ${state.settings.reportModel?`<h3>Top relative condition-pattern scores</h3><table><thead><tr><th>Condition pattern</th><th>Family</th><th>Score</th></tr></thead><tbody>${model.slice(0,15).map(h=>`<tr><td>${escapeHtml(h.label)}</td><td>${escapeHtml(h.family||'')}</td><td>${(h.score*100).toFixed(1)}%</td></tr>`).join('')}</tbody></table><p><strong>Important:</strong> These normalized Bayesian scores are generated by a non-validated heuristic model and are not disease probabilities, diagnoses, or rule-outs. The library includes an Other / unmodeled condition reserve.</p>`:''}
   <p class="report-muted">This report is an owner-generated record intended to help communicate observations. It does not replace veterinary examination, diagnosis, or treatment.</p></article>`;
 }
 function renderSettingsPage(){
   return `<div class="grid two"><div class="card"><div class="card-head"><div><span class="eyebrow">PATIENT</span><h2>Profile</h2></div></div><div class="card-pad"><form id="profileForm"><div class="form-row"><div class="field"><label>Name</label><input name="name" value="${escapeHtml(state.profile.name)}"></div><div class="field"><label>Sex</label><select name="sex"><option value="unknown" ${state.profile.sex==='unknown'?'selected':''}>Unknown / not set</option><option value="female" ${state.profile.sex==='female'?'selected':''}>Female</option><option value="male" ${state.profile.sex==='male'?'selected':''}>Male</option></select></div></div><div class="form-row"><div class="field"><label>Birth date</label><input type="date" name="birthDate" value="${escapeHtml(state.profile.birthDate||'')}"></div><div class="field"><label>Weight</label><input name="weight" placeholder="e.g., 10.4 lb" value="${escapeHtml(state.profile.weight||'')}"></div></div><div class="form-row"><div class="field"><label>Veterinarian</label><input name="vetName" value="${escapeHtml(state.profile.vetName||'')}"></div><div class="field"><label>Vet phone</label><input name="vetPhone" value="${escapeHtml(state.profile.vetPhone||'')}"></div></div><div class="form-actions"><button class="primary">Save profile</button></div></form></div></div>
   <div class="card"><div class="card-head"><div><span class="eyebrow">DATA</span><h2>Backup & portability</h2></div></div><div class="card-pad"><p>Your data is stored in IndexedDB in this browser. Export backups regularly, especially before clearing browser data.</p><div class="form-actions" style="justify-content:flex-start"><button class="ghost" data-export>Export JSON</button><label class="ghost" style="cursor:pointer">Import JSON<input type="file" id="importFile" accept="application/json" hidden></label><button class="secondary" data-demo>Load demo episode</button></div><div class="divider"></div><button class="danger" data-reset>Reset local data</button></div></div></div>
-  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">KNOWLEDGE PACK</span><h2>${escapeHtml(knowledge.packId)}</h2></div><span class="chip">${escapeHtml(knowledge.modelStatus)}</span></div><div class="card-pad"><p>${escapeHtml(knowledge.modelNotice)}</p><h3>Urgency-rule provenance</h3><ul class="source-list">${knowledge.sources.map(s=>`<li><a href="${s.url}" target="_blank" rel="noreferrer">${escapeHtml(s.name)}</a> — ${escapeHtml(s.role)}</li>`).join('')}</ul><p class="helper">The cited sources support emergency red-flag examples and the importance of tracking directional changes such as increased/decreased appetite, thirst, and urination. They do not validate the numeric Bayesian priors or likelihood values in this experimental knowledge pack.</p></div></div>`;
+  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">KNOWLEDGE PACK</span><h2>${escapeHtml(knowledge.packId)}</h2></div><span class="chip">${escapeHtml(knowledge.modelStatus)}</span></div><div class="card-pad"><p>${escapeHtml(knowledge.modelNotice)}</p><h3>Coverage</h3><p><strong>${knowledge.coverage?.namedConditionCount||knowledge.hypotheses.length} named condition patterns</strong> + Other / unmodeled reserve · ${knowledge.coverage?.findingCount||knowledge.findings.length} owner-observable findings · ${knowledge.coverage?.familyCount||new Set(knowledge.hypotheses.map(h=>h.family)).size} families.</p><p>${escapeHtml(knowledge.coverage?.scope||'')}</p><p class="helper">${escapeHtml(knowledge.coverage?.priorPolicy||'')}</p><h3>Knowledge & urgency provenance</h3><ul class="source-list">${knowledge.sources.map(s=>`<li><a href="${s.url}" target="_blank" rel="noreferrer">${escapeHtml(s.name)}</a> — ${escapeHtml(s.role)}</li>`).join('')}</ul><p class="helper">The cited veterinary references support representative condition/sign relationships and emergency red-flag examples. They do <strong>not</strong> validate the numeric Bayesian priors or likelihood weights in this experimental pack.</p></div></div>`;
 }
 
 function bindLogForm(form){
@@ -280,7 +293,7 @@ function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.remove('hi
 
 async function init(){
   try{
-    knowledge=await fetch('./data/cat-knowledge-v0.2.json').then(r=>{if(!r.ok)throw new Error('Knowledge pack failed to load');return r.json();});
+    knowledge=await fetch('./data/cat-knowledge-v0.3.json').then(r=>{if(!r.ok)throw new Error('Knowledge pack failed to load');return r.json();});
     state=await dbGet('state') || defaultState();
     const hadState=await dbGet('state');
     state.settings ||= {};

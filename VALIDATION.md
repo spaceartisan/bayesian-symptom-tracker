@@ -1,63 +1,80 @@
-# Validation — v0.1.1
+# Validation — v0.2.0
 
-Validated 2026-09-26.
+## Release scope
+
+This release expands the experimental feline knowledge pack from 12 broad pattern buckets to **95 named condition patterns plus an Other / unmodeled reserve**, with **109 owner-observable findings** and family-level aggregation.
 
 ## Static checks
 
 - `node --check app.js` — pass
-- JSON parse: `data/cat-knowledge-v0.2.json` — pass
-- JSON parse: `manifest.webmanifest` — pass
-- Local HTTP request for `index.html` — HTTP 200
-- Local HTTP request for `data/cat-knowledge-v0.2.json` — HTTP 200 and valid JSON
+- `node --check service-worker.js` — pass
+- `python -m py_compile tools/build_knowledge.py` — pass
+- JSON parse: `data/cat-knowledge-v0.3.json` — pass
+- Hypothesis priors normalize to 1.0 — pass
+- Knowledge source references resolve — pass
+- Likelihood tables reference only known findings — pass
+- Urgency rules reference only known findings — pass
+- Relative GitHub Pages asset paths — pass
+- Local HTTP requests for `index.html`, `app.js`, `styles.css`, and `data/cat-knowledge-v0.3.json` — HTTP 200
 
-## Model regression checks
+## Model/data regression suite
 
-Run with:
+Run:
 
 ```bash
 node tests/smoke.mjs
 ```
 
-Covered:
+Current result:
 
-- Hypothesis priors sum to 1.
-- All likelihood references point to defined findings and contain valid values.
-- All urgency rules reference defined findings.
-- Posterior scores normalize to 1.
-- An inability-to-urinate finding makes the urinary pattern the highest relative heuristic score.
-- Inability to urinate triggers a deterministic emergency rule independent of the Bayesian score.
-- Repeated vomiting plus lethargy triggers the combined urgent rule.
-- A later explicit negative observation clears a direct active urgency finding in the current-state rule engine.
+```text
+PASS knowledge integrity: 95 named conditions + reserve, 109 findings
+PASS posterior normalization
+PASS directional-state coverage
+PASS canonical differential ranking scenarios
+PASS deterministic urgency rules
+```
+
+Canonical synthetic cases currently tested include:
+
+- hyperthyroidism-like directional pattern
+- diabetes-like polyuria/polydipsia + weight-loss pattern
+- FIP-like systemic/effusive pattern
+- urethral-obstruction pattern
+- hepatic-lipidosis pattern
+- chronic IBD-like pattern
+- congestive-heart-failure respiratory pattern
+
+These regression cases test software/model consistency only. They do **not** constitute clinical validation.
 
 ## Browser interaction smoke test
 
-The v0.1.0 headless-browser interaction test covered the application shell, persistence flow, urgency behavior, timeline, report, and provenance rendering. For v0.1.1, the container Chromium process did not terminate cleanly during the rerun because of an environment-level D-Bus/headless-browser issue, so this release is not claiming a fresh browser automation pass. Static HTTP loading, JavaScript syntax, JSON integrity, and the expanded model regression suite all passed.
+A fresh Chromium interaction run was completed using the actual HTML/CSS/JavaScript with an in-memory IndexedDB/fetch harness because this execution environment blocks browser navigation to localhost/file URLs.
 
-Covered:
+The run verified:
 
-1. First-run Dashboard rendered successfully.
-2. “No active deterministic urgency flags” rendered on a blank episode.
-3. Quick-log modal opened.
-4. “Unable to urinate / no urine” was logged with high intensity.
-5. Dashboard changed to an emergency flag.
-6. Timeline displayed the new observation and edit control.
-7. Report view rendered the observation.
-8. Settings rendered knowledge-pack provenance sources.
-9. No page-level or console errors were reported.
+- application shell renders without page/console errors
+- observation modal accepts and persists findings through the app's real UI flow
+- a canonical increased-appetite + weight-loss + increased-thirst + increased-urine + hyperactivity case ranks **Hyperthyroidism** first in the experimental model
+- Model view renders 96 total hypotheses, family aggregation, evidence contribution, and the Other / unmodeled reserve
+- logging `Unable to urinate / no urine` independently triggers the deterministic emergency rule
+- Settings renders 95 named condition patterns, 109 findings, coverage language, and provenance
 
-## Visual review
+Reviewed captures:
 
-The desktop dashboard was rendered and visually inspected at 1440×1100. See `docs/screenshots/dashboard.png`.
+- `docs/screenshots/dashboard.png`
+- `docs/screenshots/model.png`
 
-## Scope limitation
+## Knowledge-pack limitations
 
-The included Bayesian knowledge pack is an experimental heuristic. Validation above verifies software behavior and internal consistency; it is **not clinical validation** of the Bayesian priors or likelihood values.
+`cat-practical-differentials-v0.3` is intentionally labeled experimental and non-clinically validated.
 
+- Numeric likelihood weights are heuristic pattern weights, not measured diagnostic sensitivity/specificity.
+- Named-condition priors are deliberately equal baseline weights rather than epidemiologic prevalence estimates.
+- `Other / unmodeled condition` retains a 2% reserve prior so the represented library is not treated as exhaustive.
+- Owner-observable symptoms alone cannot distinguish many diseases that require physical examination, laboratory testing, imaging, pathology, or other veterinary diagnostics.
+- The deterministic urgency layer remains independent from Bayesian condition ranking.
 
-## v0.1.1 regression additions
+## Compatibility
 
-- Verified increased appetite exists as a first-class finding.
-- Verified increased and reduced urine volume exist independently of frequent small urinations.
-- Verified appetite and urine-volume state groups are internally consistent.
-- Verified the directional metabolic pattern test ranks the broad metabolic/endocrine hypothesis first for the synthetic increased-appetite + increased-urine + increased-thirst + weight-loss combination.
-- Verified legacy finding IDs remain present for existing exported/local records.
+Existing v0.1.x stored observations remain readable because existing finding IDs were retained. The app updates the active model-pack identifier without rewriting historical observation records.

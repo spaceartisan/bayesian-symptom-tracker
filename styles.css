@@ -14,3 +14,12 @@ form{display:grid;gap:15px}.field{display:grid;gap:7px}.field label{font-size:12
 @media(max-width:1000px){.app-shell{grid-template-columns:1fr}.sidebar{position:fixed;left:-270px;width:250px;transition:.2s}.sidebar.open{left:0;box-shadow:20px 0 50px rgba(0,0,0,.4)}.mobile-menu{display:block}.grid.two,.grid.three{grid-template-columns:1fr}.topbar{padding:18px}.content{padding:20px}.top-actions .ghost{display:none}}
 @media(max-width:650px){.topbar p{display:none}.top-actions .primary{padding:9px 10px;font-size:12px}.content{padding:14px}.form-row{grid-template-columns:1fr}.score-row{grid-template-columns:minmax(120px,1fr) 1.2fr 50px}.grid.three{gap:12px}.kpi-value{font-size:25px}.modal-backdrop{padding:10px}.event{grid-template-columns:62px 14px 1fr}.event:before{left:68px}}
 @media print{body{background:white;color:black}.sidebar,.topbar,.no-print,.report-options,.report-actions{display:none!important}.app-shell{display:block}.content{padding:0}.card{border:0;box-shadow:none}.report-paper{box-shadow:none;border-radius:0;padding:0}#appContent>*:not(.print-target){display:none!important}.print-target{display:block!important}}
+
+/* v0.2 condition-library browser */
+.model-family{border:1px solid var(--border);border-radius:12px;margin:10px 0;background:rgba(255,255,255,.018);overflow:hidden}
+.model-family summary{display:flex;justify-content:space-between;gap:16px;align-items:center;cursor:pointer;padding:14px 16px;list-style:none}
+.model-family summary::-webkit-details-marker{display:none}
+.model-family summary span{font-size:12px;color:var(--muted);white-space:nowrap}
+.model-family[open] summary{border-bottom:1px solid var(--border)}
+.model-family .score-list{padding:6px 0}
+@media (max-width:640px){.model-family summary{align-items:flex-start;flex-direction:column;gap:4px}.model-family summary span{white-space:normal}}
