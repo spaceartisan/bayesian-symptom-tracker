@@ -44,3 +44,27 @@ form{display:grid;gap:15px}.field{display:grid;gap:7px}.field label{font-size:12
 @media(max-width:1150px){.context-button{max-width:145px}.top-actions{gap:7px}}
 @media(max-width:1000px){.form-row.three{grid-template-columns:1fr 1fr}.form-row.three .field:first-child{grid-column:1/-1}.top-actions #episodeButton{display:none}.top-actions #petButton{display:inline-flex}}
 @media(max-width:650px){.form-row.three{grid-template-columns:1fr}.form-row.three .field:first-child{grid-column:auto}.top-actions #petButton{max-width:105px;padding:9px 10px;font-size:12px}.button-row>*{flex:1 1 auto}.pet-switch{grid-template-columns:38px 1fr}.pet-switch>.chip{display:none}}
+
+
+/* v0.4 clinical measurements + diet context */
+.context-grid{align-items:start}
+.context-list{display:grid;gap:10px;margin-top:12px}
+.context-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:start;padding:13px 0;border-bottom:1px solid rgba(34,52,77,.58)}
+.context-item:last-child{border-bottom:0}
+.context-item strong{display:inline-block;font-size:13px;margin-right:8px}
+.context-item small{display:block;color:var(--muted);margin-top:4px;line-height:1.4}
+.context-item p{font-size:12px;margin:6px 0 0}
+.context-value{font-size:13px;font-weight:800;color:var(--accent2)}
+.context-actions{display:flex;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.nutrient-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.context-summary{display:grid;grid-template-columns:auto auto 1fr;gap:28px;align-items:center}
+.context-summary>div{display:grid;gap:3px}.context-summary>div strong{font-size:26px}.context-summary>div span{font-size:11px;color:var(--muted)}.context-summary p{margin:0;font-size:12px}
+.clinical-dot{background:var(--accent2)!important;box-shadow:0 0 0 4px rgba(125,167,255,.09)!important}
+
+.clinical-value-row{grid-template-columns:1.35fr 1fr .65fr}
+.clinical-reference-row{grid-template-columns:1fr 1fr 1.25fr}
+@media(max-width:1000px){.clinical-value-row,.clinical-reference-row{grid-template-columns:1fr 1fr}.clinical-value-row .field:first-child{grid-column:1/-1}}
+@media(max-width:650px){.clinical-value-row,.clinical-reference-row{grid-template-columns:1fr}.clinical-value-row .field:first-child{grid-column:auto}}
+.empty.compact{padding:24px 10px}
+@media(max-width:900px){.context-summary{grid-template-columns:1fr 1fr}.context-summary p{grid-column:1/-1}}
+@media(max-width:650px){.context-item{grid-template-columns:1fr}.context-actions{justify-content:flex-start}.context-summary{grid-template-columns:1fr}.context-summary p{grid-column:auto}.context-grid .card-head{align-items:center}.context-grid .card-head .primary{padding:8px 10px;font-size:11px}}

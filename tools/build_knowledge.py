@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parents[1] / 'data' / 'cat-knowledge-v0.3.json'
+OUT = Path(__file__).resolve().parents[1] / 'data' / 'cat-knowledge-v0.4.json'
 
 # The numeric values below are intentionally heuristic pattern weights, not
 # measured sensitivities/specificities or epidemiologic probabilities.
@@ -12,9 +12,10 @@ L = 0.38   # somewhat inconsistent
 U = 0.24   # notably inconsistent
 
 findings = []
-def F(id, category, label, question, state=None):
+def F(id, category, label, question, state=None, source_type='owner'):
     x = {'id':id,'category':category,'label':label,'question':question}
     if state: x['stateGroup']=state
+    if source_type != 'owner': x['sourceType']=source_type
     findings.append(x)
 
 # Directional / state observations
@@ -143,6 +144,76 @@ F('recurrent_infections','Context','Recurrent or unusual infections','Have recur
 F('chronic_course','Context','Chronic / recurrent course','Has the problem persisted or recurred over weeks to months?')
 F('acute_onset','Context','Sudden / acute onset','Did the problem begin suddenly?')
 F('anorexia_2d','Context','Little or no food for ~2 days','Has the cat eaten little or nothing for roughly two days?')
+
+# Clinical/laboratory evidence vocabulary. These are logged through the structured
+# Clinical & diet screen rather than the owner-observation picker. Reference ranges
+# are supplied by the user's laboratory/clinic; the app does not impose universal
+# numeric cutoffs. Only explicitly interpreted abnormal/positive states can be
+# converted into Bayesian evidence.
+def CF(id, category, label):
+    F(id, category, label, label, source_type='clinical')
+
+CF('blood_glucose_high','Clinical · Chemistry','Blood glucose above reference range')
+CF('blood_glucose_low','Clinical · Chemistry','Blood glucose below reference range')
+CF('fructosamine_high','Clinical · Chemistry','Fructosamine above reference range')
+CF('creatinine_high','Clinical · Chemistry','Creatinine above reference range')
+CF('bun_high','Clinical · Chemistry','BUN / urea above reference range')
+CF('sdma_high','Clinical · Chemistry','SDMA above reference range')
+CF('phosphorus_high','Clinical · Chemistry','Phosphorus above reference range')
+CF('alt_high','Clinical · Chemistry','ALT above reference range')
+CF('alp_high','Clinical · Chemistry','ALP above reference range')
+CF('bilirubin_high','Clinical · Chemistry','Total bilirubin above reference range')
+CF('albumin_low','Clinical · Chemistry','Albumin below reference range')
+CF('potassium_low','Clinical · Chemistry','Potassium below reference range')
+CF('potassium_high','Clinical · Chemistry','Potassium above reference range')
+CF('calcium_high','Clinical · Chemistry','Calcium above reference range')
+CF('pcv_low','Clinical · Hematology','PCV / hematocrit below reference range')
+CF('wbc_high','Clinical · Hematology','White blood cell count above reference range')
+CF('total_t4_high','Clinical · Endocrine','Total T4 above reference range')
+CF('urine_glucose_positive','Clinical · Urinalysis','Urine glucose positive')
+CF('urine_ketones_positive','Clinical · Urinalysis','Urine ketones positive')
+CF('urine_specific_gravity_low','Clinical · Urinalysis','Urine specific gravity interpreted as low / inadequately concentrated')
+CF('urine_protein_positive','Clinical · Urinalysis','Urine protein / UPC interpreted as positive or elevated')
+CF('urine_culture_positive','Clinical · Urinalysis','Urine culture positive')
+CF('fpl_high','Clinical · Specialized','Feline pancreatic lipase result above reference range')
+CF('ntprobnp_high','Clinical · Specialized','NT-proBNP above reference range')
+CF('felv_positive','Clinical · Infectious testing','FeLV test positive')
+CF('fiv_positive','Clinical · Infectious testing','FIV test positive')
+CF('fecal_parasites_positive','Clinical · Infectious testing','Fecal parasite test positive')
+CF('blood_pressure_high','Clinical · Vitals','Systolic blood pressure interpreted as high')
+
+measurement_templates = [
+    {'id':'body_weight','label':'Body weight','category':'Vitals','unit':'lb','kind':'numeric','modelMap':{}},
+    {'id':'temperature','label':'Body temperature','category':'Vitals','unit':'°F','kind':'numeric','modelMap':{'high':'fever_high','low':'temp_low'}},
+    {'id':'resting_resp_rate','label':'Resting respiratory rate','category':'Vitals','unit':'breaths/min','kind':'numeric','modelMap':{'high':'resp_rapid'}},
+    {'id':'systolic_bp','label':'Systolic blood pressure','category':'Vitals','unit':'mmHg','kind':'numeric','modelMap':{'high':'blood_pressure_high'}},
+    {'id':'blood_glucose','label':'Blood glucose','category':'Chemistry','unit':'mg/dL','kind':'numeric','modelMap':{'high':'blood_glucose_high','low':'blood_glucose_low'}},
+    {'id':'fructosamine','label':'Fructosamine','category':'Chemistry','unit':'µmol/L','kind':'numeric','modelMap':{'high':'fructosamine_high'}},
+    {'id':'creatinine','label':'Creatinine','category':'Chemistry','unit':'mg/dL','kind':'numeric','modelMap':{'high':'creatinine_high'}},
+    {'id':'bun','label':'BUN / urea','category':'Chemistry','unit':'mg/dL','kind':'numeric','modelMap':{'high':'bun_high'}},
+    {'id':'sdma','label':'SDMA','category':'Chemistry','unit':'µg/dL','kind':'numeric','modelMap':{'high':'sdma_high'}},
+    {'id':'phosphorus','label':'Phosphorus','category':'Chemistry','unit':'mg/dL','kind':'numeric','modelMap':{'high':'phosphorus_high'}},
+    {'id':'alt','label':'ALT','category':'Chemistry','unit':'U/L','kind':'numeric','modelMap':{'high':'alt_high'}},
+    {'id':'alp','label':'ALP','category':'Chemistry','unit':'U/L','kind':'numeric','modelMap':{'high':'alp_high'}},
+    {'id':'bilirubin','label':'Total bilirubin','category':'Chemistry','unit':'mg/dL','kind':'numeric','modelMap':{'high':'bilirubin_high'}},
+    {'id':'albumin','label':'Albumin','category':'Chemistry','unit':'g/dL','kind':'numeric','modelMap':{'low':'albumin_low'}},
+    {'id':'potassium','label':'Potassium','category':'Chemistry','unit':'mmol/L','kind':'numeric','modelMap':{'low':'potassium_low','high':'potassium_high'}},
+    {'id':'calcium','label':'Calcium','category':'Chemistry','unit':'mg/dL','kind':'numeric','modelMap':{'high':'calcium_high'}},
+    {'id':'pcv','label':'PCV / hematocrit','category':'Hematology','unit':'%','kind':'numeric','modelMap':{'low':'pcv_low'}},
+    {'id':'wbc','label':'White blood cell count','category':'Hematology','unit':'K/µL','kind':'numeric','modelMap':{'high':'wbc_high'}},
+    {'id':'total_t4','label':'Total T4','category':'Endocrine','unit':'µg/dL','kind':'numeric','modelMap':{'high':'total_t4_high'}},
+    {'id':'urine_specific_gravity','label':'Urine specific gravity','category':'Urinalysis','unit':'','kind':'numeric','modelMap':{'low':'urine_specific_gravity_low'}},
+    {'id':'urine_glucose','label':'Urine glucose','category':'Urinalysis','unit':'','kind':'categorical','choices':['negative','trace','positive'],'modelMap':{'trace':'urine_glucose_positive','positive':'urine_glucose_positive'}},
+    {'id':'urine_ketones','label':'Urine ketones','category':'Urinalysis','unit':'','kind':'categorical','choices':['negative','trace','positive'],'modelMap':{'trace':'urine_ketones_positive','positive':'urine_ketones_positive'}},
+    {'id':'urine_protein_upc','label':'Urine protein / UPC','category':'Urinalysis','unit':'','kind':'numeric','modelMap':{'high':'urine_protein_positive','positive':'urine_protein_positive'}},
+    {'id':'urine_culture','label':'Urine culture','category':'Urinalysis','unit':'','kind':'categorical','choices':['negative','positive'],'modelMap':{'positive':'urine_culture_positive'}},
+    {'id':'fpl','label':'Feline pancreatic lipase (fPL)','category':'Specialized','unit':'','kind':'numeric','modelMap':{'high':'fpl_high','positive':'fpl_high'}},
+    {'id':'ntprobnp','label':'NT-proBNP','category':'Specialized','unit':'','kind':'numeric','modelMap':{'high':'ntprobnp_high','positive':'ntprobnp_high'}},
+    {'id':'felv_test','label':'FeLV test','category':'Infectious testing','unit':'','kind':'categorical','choices':['negative','positive'],'modelMap':{'positive':'felv_positive'}},
+    {'id':'fiv_test','label':'FIV test','category':'Infectious testing','unit':'','kind':'categorical','choices':['negative','positive'],'modelMap':{'positive':'fiv_positive'}},
+    {'id':'fecal_parasites','label':'Fecal parasite test','category':'Infectious testing','unit':'','kind':'categorical','choices':['negative','positive'],'modelMap':{'positive':'fecal_parasites_positive'}},
+    {'id':'custom','label':'Custom measurement / test','category':'Other','unit':'','kind':'custom','modelMap':{}},
+]
 
 # Helpers for condition definitions
 conditions=[]
@@ -371,6 +442,50 @@ C('stress_behavioral','Stress / environmental behavior change','Behavioral / Iat
 C('medication_adverse_effect','Medication / treatment adverse effect','Behavioral / Iatrogenic','Temporal pattern after a medication or treatment.',
   {'medication_recent':S,'appetite_reduced':W,'vomit_single':W,'vomit_repeated':W,'stool_diarrhea':W,'energy_low':W,'restless':W})
 
+# Structured clinical evidence associations. These are deliberately broad,
+# heuristic pattern weights, not diagnostic sensitivity/specificity. They are
+# applied only when the user explicitly elects to use an abnormal/positive
+# clinical result as model evidence.
+clinical_associations = {
+    'diabetes_mellitus': {'blood_glucose_high':S,'fructosamine_high':S,'urine_glucose_positive':S},
+    'diabetic_ketoacidosis': {'blood_glucose_high':S,'fructosamine_high':M,'urine_glucose_positive':S,'urine_ketones_positive':S,'potassium_low':W},
+    'hypersomatotropism': {'blood_glucose_high':M,'fructosamine_high':M},
+    'chronic_kidney_disease': {'creatinine_high':S,'bun_high':M,'sdma_high':S,'phosphorus_high':M,'urine_specific_gravity_low':M,'urine_protein_positive':M,'pcv_low':W,'potassium_low':W,'blood_pressure_high':W},
+    'acute_kidney_injury': {'creatinine_high':S,'bun_high':S,'sdma_high':M,'phosphorus_high':M,'potassium_high':M},
+    'pyelonephritis': {'creatinine_high':W,'wbc_high':M,'urine_culture_positive':M,'urine_protein_positive':W},
+    'bacterial_uti': {'urine_culture_positive':S,'wbc_high':W,'urine_protein_positive':W},
+    'urethral_obstruction': {'creatinine_high':M,'bun_high':M,'potassium_high':S},
+    'renal_neoplasia': {'creatinine_high':M,'sdma_high':W,'pcv_low':W},
+    'hyperthyroidism': {'total_t4_high':S,'alt_high':W,'alp_high':W,'blood_pressure_high':W},
+    'hyperaldosteronism': {'potassium_low':S,'blood_pressure_high':M},
+    'hypercalcemia': {'calcium_high':S},
+    'hypokalemia': {'potassium_low':S},
+    'systemic_hypertension': {'blood_pressure_high':S},
+    'hypertrophic_cardiomyopathy': {'ntprobnp_high':M},
+    'congestive_heart_failure': {'ntprobnp_high':S},
+    'pancreatitis': {'fpl_high':S},
+    'triaditis': {'fpl_high':M,'alt_high':W,'bilirubin_high':W},
+    'cholangitis': {'alt_high':M,'alp_high':M,'bilirubin_high':M,'wbc_high':W},
+    'hepatic_lipidosis': {'alt_high':M,'alp_high':M,'bilirubin_high':S},
+    'chronic_hepatopathy': {'alt_high':M,'alp_high':W,'bilirubin_high':M,'albumin_low':M},
+    'biliary_obstruction': {'alp_high':M,'bilirubin_high':S},
+    'gi_ulcer_bleeding': {'pcv_low':M,'bun_high':W},
+    'gi_lymphoma': {'pcv_low':W,'albumin_low':W},
+    'ibd_chronic_enteropathy': {'albumin_low':W},
+    'intestinal_parasites': {'fecal_parasites_positive':S,'pcv_low':W},
+    'felv': {'felv_positive':S,'pcv_low':M},
+    'fiv': {'fiv_positive':S},
+    'lymphoma_multicentric': {'pcv_low':W,'calcium_high':W,'felv_positive':W},
+    'anemia_general': {'pcv_low':S},
+    'hemolytic_anemia': {'pcv_low':S,'bilirubin_high':M},
+    'skin_abscess': {'wbc_high':W},
+    'pneumonia': {'wbc_high':M},
+    'lily_toxicity': {'creatinine_high':M,'bun_high':M,'phosphorus_high':W,'potassium_high':W},
+    'ethylene_glycol_toxicity': {'creatinine_high':M,'bun_high':M,'potassium_high':W},
+}
+for c in conditions:
+    c['sig'].update(clinical_associations.get(c['id'], {}))
+
 # Reserve hypothesis intentionally neutral.
 other = {'id':'other_unmodeled','label':'Other / unmodeled condition','family':'Other','description':'Reserve hypothesis for conditions not represented in this experimental library.','sig':{},'sourceRefs':[]}
 
@@ -423,11 +538,15 @@ sources = [
     {'id':'merck_pyometra','name':'Merck Veterinary Manual — Reproductive Disorders of Female Cats','url':'https://www.merckvetmanual.com/cat-owners/reproductive-disorders-of-cats/reproductive-disorders-of-female-cats','role':'Pyometra clinical signs'},
     {'id':'merck_aki','name':'Merck Veterinary Manual — Renal Dysfunction in Small Animals','url':'https://www.merckvetmanual.com/urinary-system/noninfectious-diseases-of-the-urinary-system-in-small-animals/renal-dysfunction-in-small-animals','role':'Acute kidney injury clinical signs'},
     {'id':'merck_toxoplasmosis','name':'Merck Veterinary Manual — Toxoplasmosis in Cats','url':'https://www.merckvetmanual.com/cat-owners/disorders-affecting-multiple-body-systems-of-cats/toxoplasmosis-in-cats','role':'Toxoplasmosis clinical signs'},
+    {'id':'merck_common_labs','name':'Merck Veterinary Manual — Common Laboratory Tests in Veterinary Medicine','url':'https://www.merckvetmanual.com/special-pet-topics/diagnostic-tests-and-imaging/common-laboratory-tests-in-veterinary-medicine','role':'General interpretation context for chemistry, CBC, and urinalysis measurements'},
+    {'id':'merck_clinical_biochem','name':'Merck Veterinary Manual — Clinical Biochemistry','url':'https://www.merckvetmanual.com/clinical-pathology-and-procedures/diagnostic-procedures-for-the-private-practice-laboratory/clinical-biochemistry','role':'Clinical chemistry interpretation context'},
+    {'id':'iris_ckd','name':'International Renal Interest Society — IRIS Staging System','url':'https://www.iris-kidney.com/iris-staging-system','role':'Renal biomarkers, proteinuria, and blood-pressure context'},
+    {'id':'cornell_thyroid_tests','name':'Cornell Animal Health Diagnostic Center — Feline Thyroid Tests','url':'https://www.vet.cornell.edu/animal-health-diagnostic-center/testing/testing-protocols-interpretations/feline-thyroid-tests','role':'Feline thyroid-test interpretation context'},
 ]
 
 pack = {
-    'schemaVersion': 3,
-    'packId': 'cat-practical-differentials-v0.3',
+    'schemaVersion': 4,
+    'packId': 'cat-practical-differentials-v0.4',
     'species': 'cat',
     'modelStatus': 'experimental-heuristic',
     'modelNotice': (
@@ -435,15 +554,19 @@ pack = {
         'Condition priors are deliberately not epidemiologic prevalence estimates; 2% of baseline model mass is reserved for Other / unmodeled condition.'
     ),
     'coverage': {
-        'scope': 'Practical owner-observable feline differential library, not an exhaustive veterinary nosology.',
+        'scope': 'Practical feline differential library combining owner observations with optional structured clinical evidence; not an exhaustive veterinary nosology.',
         'conditionCount': len(hypotheses),
         'namedConditionCount': len(conditions),
         'findingCount': len(findings),
+        'ownerFindingCount': len([f for f in findings if f.get('sourceType','owner') == 'owner']),
+        'clinicalFindingCount': len([f for f in findings if f.get('sourceType') == 'clinical']),
+        'measurementTemplateCount': len(measurement_templates),
         'familyCount': len({h['family'] for h in hypotheses}),
         'priorPolicy': 'Named conditions share equal baseline prior weight; Other / unmodeled condition holds a 2% reserve prior.'
     },
     'hypotheses': hypotheses,
     'findings': findings,
+    'measurementTemplates': measurement_templates,
     'likelihoods': likelihoods,
     'urgencyRules': urgency_rules,
     'sources': sources,
