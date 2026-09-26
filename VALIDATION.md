@@ -1,136 +1,88 @@
-# Validation — v0.4.0
+# Bayesian Symptom Tracker v0.5.0 — Validation Record
 
-## Release scope
+Date: 2026-09-26
 
-This release adds a separate **clinical measurement/test-result layer** and **diet/nutrient context layer** while preserving the existing multi-pet, per-episode inference model.
+## Static validation
 
-The feline knowledge pack is now `cat-practical-differentials-v0.4` with:
+Passed:
 
-- **95 named condition patterns plus Other / unmodeled reserve**;
-- **109 owner-observable findings**;
-- **28 clinical findings**;
-- **30 structured clinical measurement/test templates**;
-- **17 condition families**.
+- `node --check app.js`
+- `python -m json.tool data/cat-knowledge-v0.5.json`
+- GitHub Pages uses only relative local paths
+- service worker cache updated to `cat-knowledge-v0.5.json`
+- no server-side dependency introduced
 
-Mapped abnormal/positive clinical results may be explicitly opted into the Bayesian model. Diet records never affect Bayesian scores in this release. Normal/negative clinical results remain context and are not automatically converted into negative/rule-out evidence.
+## Knowledge-pack regression tests
 
-## Static checks
+`node tests/smoke.mjs` passes:
 
-- `node --check app.js` — pass
-- `node --check service-worker.js` — pass
-- `python -m py_compile tools/build_knowledge.py` — pass
-- JSON parse: `data/cat-knowledge-v0.4.json` — pass through regression loader
-- Hypothesis priors normalize to 1.0 — pass
-- Knowledge source references resolve — pass
-- Likelihood tables reference only known findings — pass
-- Clinical measurement mappings reference only known clinical findings — pass
-- Urgency rules reference only known findings — pass
-- Relative GitHub Pages asset paths retained — pass
-- Service-worker cache revision bumped and v0.4 knowledge-pack path cached — pass
+- knowledge schema/provenance integrity
+- 95 named feline condition patterns + unmodeled reserve retained
+- source references for demographic modifiers and quantitative anchors resolve
+- posterior normalization
+- broad canonical patterns across multiple systems, including:
+  - hyperthyroidism
+  - diabetes mellitus
+  - FIP
+  - urethral obstruction
+  - congestive heart failure
+  - pancreatitis with clinical evidence
+  - CKD in an older cat with creatinine/SDMA evidence
+- deterministic urgency rules remain separate from Bayesian inference
+- repeated raw observations are aggregated into a saturating temporal evidence weight
+- state transitions preserve prior historical evidence without leaving two states equally “current”
+- a 400 mg/dL glucose result carries more clinical-evidence weight than a barely-above-anchor result while remaining a mapped finding rather than a diagnosis
+- repeated mapped clinical values are summarized into a saturating serial-evidence weight rather than multiplied as independent tests
 
-## Model/data regression suite
+## State / longitudinal regression tests
 
-Run:
+`node tests/state-smoke.mjs` passes:
 
-```bash
-node tests/smoke.mjs
-```
+- v0.4 state schema migrates to v0.5 schema without losing existing records
+- diagnosis-history collection is created on migration
+- old episodes receive an empty linked-history list
+- diet context remains non-inferential
+- confirmed diagnosis history changes prior context only when explicitly enabled
+- prior episodes do not influence the current episode until explicitly linked
+- linked history is visibly/reliably down-weighted
+- retrospective episode evidence bounds are derived from the actual raw observation/clinical timestamps
 
-Current result:
+## Supplied-case audit
 
-```text
-PASS knowledge integrity: 95 named conditions + reserve, 109 owner findings, 28 clinical findings
-PASS posterior normalization
-PASS owner-observation canonical scenarios
-PASS broad clinical-evidence scenarios
-PASS deterministic urgency rules
-```
+The user's supplied v0.4 JSON was loaded into the v0.5 inference engine **without hard-coding an expected diagnosis**.
 
-The owner-observation scenarios remain independent of the user's diabetes experiment. Broad clinical regression cases separately exercise diabetes-pattern, CKD-pattern, hyperthyroid-pattern, and pancreatitis-pattern inputs to verify that the generic clinical-evidence plumbing changes rankings in the intended direction.
+Audit findings:
 
-These are software/model consistency checks only; they are **not clinical validation**.
+- the 400 mg/dL blood glucose record remains attached to the same episode and retains its raw value
+- v0.5 converts repeated owner entries into longitudinal summaries rather than independent duplicates
+- the clinical glucose record receives quantitative magnitude weighting
+- age is evaluated at episode start
+- source-backed diabetes pattern representation now includes chronic course and recognizes that decreased appetite can occur in diabetic cats
+- source-backed CKD age context modestly lowers CKD prior consistency in a young cat without excluding CKD
 
-## State / context regression suite
+The supplied case is intentionally **not encoded as a pass/fail expected-winner test**. It is used as an audit case so future model changes cannot simply be tuned to produce a desired condition.
 
-Run:
+## Browser rendering
 
-```bash
-node tests/state-smoke.mjs
-```
+A fresh Chromium CLI rendering pass could not be completed in this container because the installed Chromium process hangs before normal headless completion, including on a trivial `data:` page. This appears environment-level rather than app-specific. No successful browser screenshot is claimed for v0.5.
 
-Current result:
+The application-side rendering functions are exercised in the Node VM regression tests, and previous v0.4 browser rendering was successful before the container-level Chromium issue appeared.
 
-```text
-PASS legacy migration to state schema v3
-PASS multi-pet isolation across observations, clinical results, and diets
-PASS clinical evidence mapping and conservative normal-result handling
-PASS diet context remains non-inferential
-PASS context/report rendering and nutrient conversion
-```
+Older-version screenshots are intentionally excluded from the v0.5 package so they cannot be mistaken for fresh v0.5 visual validation.
 
-The suite verifies that:
+## Important model limitations
 
-- legacy single-pet state migrates to schema v3 without losing existing observations;
-- observations, clinical measurements, and diet records remain isolated by pet;
-- a mapped abnormal clinical result can be included as Bayesian evidence;
-- a normal clinical interpretation remains context rather than becoming an automatic rule-out;
-- changing diet context does not alter the posterior ranking;
-- reports render clinical and diet sections independently;
-- as-fed nutrient values can display a dry-matter equivalent when moisture is available.
+v0.5 is still an experimental inference framework, not a clinically validated diagnostic model.
 
-## Clinical evidence design checks
+Remaining work includes:
 
-Clinical records are intentionally stored independently from owner observations. A record contains its raw/categorical result, unit, optional laboratory reference range, interpretation, source, confidence, notes, episode attachment, and model opt-in state.
+- systematic calibration against larger blinded veterinary case sets
+- more condition-specific demographic/risk modifiers where good evidence exists
+- validated negative-test evidence mappings
+- correlation/dependency handling for clinical tests that share physiology
+- better representation of medications/treatments and response-to-treatment evidence
+- longitudinal quantitative trend fitting for weight, glucose, creatinine, SDMA and other serial measurements
+- imaging/pathology result structures
+- source-specific diagnostic-test sensitivity/specificity or likelihood-ratio support where high-quality veterinary evidence is available
 
-The release deliberately avoids universal built-in reference intervals. Numeric auto-interpretation is based only on the low/high values supplied with that record. Categorical positive/negative/trace results can be interpreted directly.
-
-Only mapped abnormal/positive interpretations are eligible for model evidence. Normal/negative results are still visible in the timeline and report but do not automatically exert negative Bayesian weight. This prevents a single apparently normal result from being treated as a validated exclusion rule.
-
-## Diet-context design checks
-
-Diet records are date-ranged patient context rather than episode evidence. The form stores food identity/form, nutrient basis, protein, fat, fiber, carbohydrate, moisture, phosphorus, phosphorus unit, feeding notes, nutrition-source notes, and free text.
-
-When moisture is present, an as-fed percentage can be displayed on a calculated dry-matter basis using:
-
-```text
-dry-matter % = as-fed % / (100 - moisture %) × 100
-```
-
-No nutrient field is passed to the Bayesian evidence engine in v0.4.0.
-
-## Knowledge-pack limitations
-
-`cat-practical-differentials-v0.4` remains intentionally labeled experimental and non-clinically validated.
-
-- Numeric likelihood weights are heuristic pattern weights, not measured diagnostic sensitivity/specificity.
-- Named-condition priors are deliberately equal baseline weights rather than epidemiologic prevalence estimates.
-- `Other / unmodeled condition` retains a reserve prior so the represented library is not treated as exhaustive.
-- Owner symptoms and broad clinical mappings cannot replace physical examination, laboratory interpretation, imaging, pathology, or veterinary diagnosis.
-- A clinical result can be affected by collection method, assay, laboratory range, timing, persistence, treatment, stress, and comorbidity; the app does not attempt to model all of those factors.
-- Diet composition is context only and makes no diagnostic claim.
-- The deterministic urgency layer remains independent from Bayesian condition ranking.
-- Multi-pet support isolates records between animals; it does not pool evidence across pets.
-
-## Compatibility
-
-Existing v0.1.x/v0.2.x/v0.3.x stored browser data and JSON backups are migrated automatically to **state schema version 3**. Existing pet, episode, and observation IDs are retained. The new `clinicalMeasurements[]` and `diets[]` collections are initialized without altering historical observations.
-
-## UI review
-
-The container's Chromium policy blocks live navigation to localhost (`ERR_BLOCKED_BY_ADMINISTRATOR`), even though the local HTTP server successfully serves the GitHub Pages assets. To keep visual validation meaningful, the release rendered the actual `renderContextPage()` and `clinicalFormHtml()` output from `app.js` with the real v0.4 knowledge pack and stylesheet, then inspected those renders in headless Chromium via `set_content`.
-
-Reviewed captures:
-
-- `docs/screenshots/clinical-diet.png`
-- `docs/screenshots/add-clinical-result.png`
-
-Visual checks completed:
-
-- the new Clinical & diet navigation item fits the existing sidebar;
-- clinical and diet cards remain distinct and clearly label model evidence versus context-only data;
-- long episode names truncate in the existing top-bar context button rather than expanding the header;
-- nutrient chips wrap cleanly and show as-fed plus calculated dry-matter values;
-- the clinical-result form fits the modal without horizontal overflow;
-- lab reference and interpretation controls remain readable at desktop width;
-- the model-evidence checkbox is visually separate from episode attachment;
-- context text explicitly states that diet does not alter Bayesian scores.
+The design intentionally preserves raw data so later inference versions can reprocess old records without requiring the user to re-enter them.

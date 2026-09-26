@@ -68,3 +68,16 @@ form{display:grid;gap:15px}.field{display:grid;gap:7px}.field label{font-size:12
 .empty.compact{padding:24px 10px}
 @media(max-width:900px){.context-summary{grid-template-columns:1fr 1fr}.context-summary p{grid-column:1/-1}}
 @media(max-width:650px){.context-item{grid-template-columns:1fr}.context-actions{justify-content:flex-start}.context-summary{grid-template-columns:1fr}.context-summary p{grid-column:auto}.context-grid .card-head{align-items:center}.context-grid .card-head .primary{padding:8px 10px;font-size:11px}}
+
+/* v0.5 longitudinal history + inference audit */
+.history-grid{align-items:start}
+.history-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.history-facts>div{border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:rgba(255,255,255,.015);display:grid;gap:3px}
+.history-facts span{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.history-facts strong{font-size:13px}
+.link-episode-list{display:grid;gap:8px;margin-top:14px}
+.link-episode-row{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.015);cursor:pointer}
+.link-episode-row input{margin-top:3px}
+.link-episode-row strong,.link-episode-row small{display:block}.link-episode-row small{color:var(--muted);margin-top:4px;line-height:1.4}
+.inference-audit{display:grid;gap:8px}
+@media(max-width:650px){.history-facts{grid-template-columns:1fr}.history-grid .card-head{align-items:center}.history-grid .card-head button{padding:8px 10px;font-size:11px}}
