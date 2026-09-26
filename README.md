@@ -1,43 +1,70 @@
-# Bayesian Symptom Tracker v0.5.0
+# Bayesian Symptom Tracker v0.6.0
 
-A local-first, GitHub Pages–compatible feline longitudinal health-record and Bayesian differential-pattern tracker.
+A local-first, GitHub Pages–compatible feline longitudinal health record and transparent Bayesian differential-pattern tracker.
 
-The project is intentionally **not a casual symptom checker**. It is designed to retain large amounts of raw information over time while keeping episodes analytically distinct, preserving provenance, and making every inferential step inspectable.
+This project is intentionally **not a casual symptom checker**. It is designed to retain a large amount of raw patient information over time, keep episodes analytically distinct, preserve provenance, and make the inference path inspectable. It does not diagnose disease and its numerical model is not clinically validated.
 
-## Core architecture
+## Design principles
 
-The app now separates five layers:
+1. **Preserve raw information.** A recorded event remains part of the history even if it never happens again.
+2. **Separate records from evidence.** The timeline can contain hundreds of entries without treating hundreds of correlated entries as hundreds of independent diagnostic tests.
+3. **Keep episodes separate by default.** Prior episodes influence a newer episode only when the user explicitly links them.
+4. **Retain known history.** Previous diagnoses can be stored with status, certainty/source, date, stage/grade, and provenance, and can optionally modify prior context.
+5. **Distinguish evidence types.** Owner observations, clinical measurements, quantitative trends, diagnoses, treatments, studies, and diet are stored differently because they do not carry the same evidentiary meaning.
+6. **Keep inference auditable.** The app exposes derived evidence, correlation discounts, temporal summaries, prior adjustments, and contribution to the leading condition.
 
-1. **Raw longitudinal record** — timestamped owner observations are never discarded just because the current model cannot use every detail.
-2. **Current episode** — the primary analytical unit. Episodes have editable start/end dates and remain separate by default.
-3. **Linked history** — prior episodes can be explicitly linked to a newer episode. Their evidence stays separate and is down-weighted rather than merged.
-4. **Known patient history** — previous diagnoses can be recorded with date, status, source, stage/grade, linked episode, notes, and an explicit “use as prior context” switch.
-5. **Context** — diet and nutrient composition are retained as contextual data and do not silently alter Bayesian scores.
+The current pipeline is:
 
-Inference pipeline:
+`raw longitudinal records → temporal/quantitative summaries → dependency-aware evidence → prior/history context → relative Bayesian pattern scores`
 
-`raw observations → temporal summaries → clinical/history/prior context → relative Bayesian pattern scores`
+## Longitudinal observations
 
-## Longitudinal observation model
+v0.6 supports three explicit observation outcomes:
 
-v0.5 no longer treats repeated symptom rows as independent duplicate tests.
+- **Observed / present**
+- **Checked and not observed**
+- **Previously present — now resolved**
 
-Examples:
+This allows an event to stay historically true without forcing the user to delete it when it stops.
 
-- One observation of increased thirst remains valid evidence indefinitely within its episode; it does not need to be deleted if it never recurs.
-- Repeated thirst observations across days become evidence of **persistence/duration**, with a saturating evidence weight.
-- Repeated vomiting observations become **recurrence** information rather than unlimited multiplicative evidence.
-- A later state change (for example `appetite reduced → appetite normal`) preserves the old state as historical evidence while making the newer state primary.
-- Explicit “checked and not observed” entries become negative/non-persistence evidence only when they occur after a prior positive or when no positive was recorded. Intensity is not used to strengthen an absence.
+Repeated entries are aggregated into temporal evidence. For example, repeated increased-thirst observations can establish persistence and duration, while a single vomiting event remains an isolated event. Repeated rows use saturating weights rather than unlimited multiplication.
 
-All raw rows remain in the timeline and JSON backup.
+Mutually exclusive state groups such as appetite, thirst, urine volume, energy, and weight preserve earlier states as historical evidence while giving the latest state primary weight.
+
+## Correlation-aware evidence
+
+v0.6 adds conservative dependency handling. Related evidence remains visible, but later evidence in the same physiological group is discounted rather than assumed independent.
+
+Current groups include examples such as:
+
+- increased thirst + increased urine volume
+- blood glucose + urine glucose + fructosamine
+- creatinine + BUN + SDMA
+- ALT + ALP + bilirubin
+- rapid/labored/open-mouth breathing
+- weight gain/loss evidence
+
+The correlation factors are inspectable in the versioned knowledge pack. They are heuristic dependency controls, not validated statistical covariance estimates.
+
+## Quantitative clinical trends
+
+Repeated numeric measurements are retained as full raw records and can also generate longitudinal trend summaries.
+
+The trend engine currently supports mappings for:
+
+- body weight → sustained gain/loss trend
+- creatinine → rising renal-marker trend
+- SDMA → rising renal-marker trend
+
+A derived trend requires multiple measurements, a minimum time span, sufficient net change, and a minimum linear-fit quality. Thresholds are deliberately conservative and inspectable in `data/cat-knowledge-v0.6.json`.
+
+**Units are never mixed in a regression.** Measurements with different units are kept as separate series unless a future version supplies an explicit validated conversion. This prevents, for example, lb and kg values from producing a meaningless slope.
 
 ## Clinical measurements
 
-Structured clinical results retain:
+Structured results can store:
 
-- actual numeric/categorical value
-- units
+- actual value and unit
 - date/time
 - lab reference interval
 - interpretation
@@ -47,128 +74,121 @@ Structured clinical results retain:
 - notes
 - whether the mapped result may enter the model
 
-Numeric results now retain **magnitude**. When a user-supplied lab reference interval exists, degree of abnormality modestly changes evidence strength. A small number of source-backed measurement anchors are also included where useful for interpretation. These anchors are not treated as diagnostic cutoffs. Repeated mapped results of the same clinical finding are summarized as a **serial clinical pattern** with a saturating weight, so daily glucose or creatinine measurements do not become dozens of independent tests.
+Numeric clinical evidence retains magnitude where an appropriate quantitative anchor or user-supplied reference interval exists. Repeated mapped results are summarized as serial clinical evidence with a saturating weight rather than multiplied as independent tests.
 
-Examples in the current pack include blood glucose, creatinine and SDMA. A single high glucose value remains compatible with stress hyperglycemia and is not converted into a diabetes diagnosis.
+A numeric result is never automatically treated as a diagnosis. The model preserves competing explanations and the Model screen shows how much weight the record contributed.
 
-## Prior diagnoses
+## Prior diagnoses and linked episodes
 
 A diagnosis record can store:
 
-- condition (library condition or custom)
-- status: confirmed active, probable active, suspected active, confirmed resolved/historical, or ruled out
-- date
-- source: veterinarian, specialist, pathology, imaging, lab-supported, owner-entered, other
-- stage/grade/qualifier
+- library condition or custom condition
+- confirmed/probable/suspected active status, historical/resolved status, or ruled-out status
+- diagnosis date
+- veterinarian/specialist/pathology/imaging/lab/owner/other source
+- stage, grade, or qualifier
 - linked episode
+- notes and provenance
+- explicit **Use as prior context** switch
+
+Diagnosis history modifies prior context rather than pretending the diagnosis is a current symptom.
+
+Episodes remain independent unless explicitly linked from **History**. Linked episode evidence is derived separately and enters the current model at a reduced historical weight; raw records are never copied into the new episode.
+
+For retrospective cases, demographic age is calculated from the earlier of the episode start or the earliest attached evidence. A mistaken later episode creation date therefore does not silently make the patient older in the inference model. The History screen still warns when episode metadata begins after its evidence and offers an alignment control.
+
+## Treatments and medications
+
+v0.6 adds structured treatment/intervention history:
+
+- medication, fluid therapy, procedure, supplement, diet therapy, or other
+- start/end time
+- dose
+- route
+- frequency
+- reason/indication
+- prescribing/directing source
+- adherence
+- observed response
+- adverse effects
 - notes/provenance
-- explicit use-as-prior-context toggle
+- optional episode link
 
-Diagnosis history changes **prior context**, not the current episode's observed likelihood evidence. Owner-entered diagnoses are automatically given less prior influence than veterinarian/specialist/pathology-supported records.
+Treatments and response are **context-only in v0.6**. They are intentionally not used as automatic diagnostic evidence because treatment choice and response can create circular reasoning without a carefully defined model.
 
-## Demographic context
+## Diagnostic studies
 
-The inference engine can apply small, transparent source-backed risk modifiers using patient data such as age and sex. These are intentionally limited and capped; they are not prevalence estimates.
+Structured study records can retain ultrasound, radiograph, echocardiogram, CT, MRI, cytology, histopathology, endoscopy, examination findings, and other studies with date, body site, interpretation, source, result summary, provenance, and optional episode link.
 
-The v0.5 pack currently includes examples for CKD, diabetes, hyperthyroidism, idiopathic cystitis, and urethral obstruction. Age is calculated at the **episode start**, which matters for historical cases.
-
-## Episode linking
-
-Episodes remain independent unless the user explicitly links them from **History**.
-
-Linked episodes:
-
-- remain separate in storage and reporting
-- are not copied into the current episode
-- contribute derived evidence at a reduced historical weight
-- are visibly labeled as linked-history evidence in the model audit
-
-This allows recurrent/chronic history to matter without contaminating unrelated episodes.
+Free-text study results are **context-only in v0.6**. A future version can add structured evidence mappings without discarding the original report text.
 
 ## Diet context
 
-Food records support:
+Food records support food form, brand/product, date range, moisture, protein, fat, fiber, carbohydrate, phosphorus, nutrient basis, feeding amount, and nutrition-data source.
 
-- wet/dry/raw/freeze-dried/home-cooked/treat/other
-- brand and product
-- date range
-- moisture
-- protein
-- fat
-- fiber
-- carbohydrate
-- phosphorus (% or mg/100 kcal)
-- as-fed or dry-matter basis
-- amount/feeding notes
-- nutrition-data source
+Diet remains **context-only**. A low-carbohydrate food does not automatically increase or decrease a diabetes score, and a phosphorus value does not automatically push CKD. The raw context is preserved for longitudinal review and future defensible models.
 
-Diet remains **context-only** in v0.5. It is intentionally not used as a disease-likelihood shortcut.
+## Urgency rules
 
-## Condition library
+Urgency is deterministic and independent of Bayesian ranking.
 
-The feline pack contains 95 named condition patterns plus an explicit **Other / unmodeled condition** reserve across 16 major families and more than 100 owner-observable findings, plus structured clinical findings.
+v0.6 timestamps each urgency flag from the actual finding that triggered it. A newer unrelated lab result or diagnostic study can no longer make an old emergency observation look current. Closed episodes and sufficiently old triggering observations are labeled historical.
 
-The numerical priors and likelihood values are heuristic pattern weights. They are not validated sensitivities, specificities, likelihood ratios, or diagnostic probabilities.
+## Knowledge pack
 
-## Transparency
+`data/cat-knowledge-v0.6.json` currently contains:
 
-The Model screen shows:
+- **95 named feline condition patterns**
+- **1 Other / unmodeled reserve hypothesis**
+- **109 owner-observable findings**
+- **30 clinical findings** including derived trend findings
+- **30 structured measurement templates**
+- **17 family labels** including the reserve/Other family
+- provenance references and inspectable inference settings
 
-- condition-level relative pattern scores
-- family aggregates
-- derived evidence items
-- temporal summary for repeated observations
-- clinical evidence weight
-- linked-history labels
-- demographic/prior-diagnosis adjustments for the top condition
-- evidence contribution to the current top score
+The numerical priors, likelihoods, correlation factors, and trend weights are heuristic research values. They are **not** validated disease probabilities, sensitivities, specificities, or diagnostic likelihood ratios.
 
-This is intended to make disagreement auditable rather than opaque.
+## Data storage and reports
 
-## Deterministic urgency rules
+The app requires no server:
 
-Urgency remains separate from Bayesian inference. Retrospective or closed episodes are labeled as **historical** when a red-flag rule is present so old data are not presented as a current emergency.
-
-## Data storage / GitHub Pages
-
-No server is required.
-
-- Static HTML/CSS/JavaScript
-- IndexedDB for local records
-- Service worker for offline use
+- static HTML/CSS/JavaScript
+- IndexedDB local storage
+- service-worker offline support
 - JSON backup/restore
-- Print / Save-to-PDF report
-- `.nojekyll` included
+- multi-pet records
+- print / Save-to-PDF reports
+- `.nojekyll` for GitHub Pages
 
-Deploy the folder contents directly to a GitHub Pages branch/site.
+Reports can optionally include Bayesian model output, urgency flags, clinical results, treatments, studies, diet, notes, and historical context.
 
 ## Migration
 
-v0.5 migrates v0.4 state automatically:
+v0.6 migrates earlier state automatically to **state schema 5**. It preserves existing pets, episodes, observations, clinical measurements, diets, diagnoses, and settings, while adding:
 
-- schema 3 → schema 4
-- adds `diagnoses: []`
-- adds `linkedEpisodeIds: []` to existing episodes
-- preserves pets, observations, clinical results, diets and settings
-- adds newer optional patient fields without removing old data
+- explicit observation `status`
+- `treatments: []`
+- `studies: []`
+- newer report settings
+- linked-history structures where needed
+
+Legacy `present: true/false` observations remain compatible and are converted to explicit present/checked-absent status.
 
 Always export a JSON backup before replacing a deployed version.
 
-## Knowledge/provenance anchors
+## Reproducible knowledge-pack build
 
-The included pack cites veterinary sources including Cornell University College of Veterinary Medicine, the Merck Veterinary Manual, and IRIS. Representative v0.5 additions use those sources for diabetes chronic-course/appetite context, age/risk context, CKD age context, lower urinary risk context, and renal/glucose measurement interpretation anchors.
-
-These citations support qualitative relationships and clinical context; they **do not validate the app's numerical Bayesian weights**.
+`tools/upgrade_knowledge_v06.py` rebuilds the v0.6 knowledge pack from the retained v0.5 pack. It only transforms the knowledge pack; application/UI changes are not replayed by the script.
 
 ## Development validation
 
 Run:
 
 ```bash
+node --check app.js
 node tests/smoke.mjs
 node tests/state-smoke.mjs
-node --check app.js
-python -m json.tool data/cat-knowledge-v0.5.json > /dev/null
+python -m json.tool data/cat-knowledge-v0.6.json > /dev/null
 ```
 
-See `VALIDATION.md` for the v0.5 validation record and remaining limitations.
+See `VALIDATION.md` for the regression coverage, supplied-case audit, browser-rendering limitation, and remaining model limitations.
