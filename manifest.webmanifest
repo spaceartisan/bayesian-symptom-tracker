@@ -1,0 +1,9 @@
+{
+  "name":"Bayesian Symptom Tracker",
+  "short_name":"Symptom Tracker",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#08111f",
+  "theme_color":"#0d1726",
+  "icons":[]
+}

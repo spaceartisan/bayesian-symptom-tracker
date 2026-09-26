@@ -1,0 +1,465 @@
+{
+  "schemaVersion": 1,
+  "packId": "cat-general-v0.1",
+  "species": "cat",
+  "modelStatus": "heuristic-demo",
+  "modelNotice": "This knowledge pack is an educational, non-validated heuristic model. Scores are relative pattern-consistency values, not disease probabilities or diagnoses.",
+  "hypotheses": [
+    {
+      "id": "gi_irritation",
+      "label": "Acute GI irritation",
+      "prior": 0.16,
+      "description": "A broad pattern bucket for short-term gastrointestinal upset, not a diagnosis."
+    },
+    {
+      "id": "dietary",
+      "label": "Dietary reaction / intolerance",
+      "prior": 0.1,
+      "description": "Pattern associated with recent food change, appetite or GI changes."
+    },
+    {
+      "id": "hairball",
+      "label": "Hairball / ingested material irritation",
+      "prior": 0.1,
+      "description": "Pattern associated with retching, vomiting, hairball history or possible ingested material."
+    },
+    {
+      "id": "urinary",
+      "label": "Urinary tract problem",
+      "prior": 0.1,
+      "description": "Pattern associated with straining, frequent small urinations, blood or absent urine."
+    },
+    {
+      "id": "systemic",
+      "label": "Systemic inflammation / infection",
+      "prior": 0.12,
+      "description": "Broad pattern associated with fever, lethargy, appetite loss and multisystem signs."
+    },
+    {
+      "id": "medication",
+      "label": "Medication / treatment effect",
+      "prior": 0.08,
+      "description": "Pattern associated with recent medication or treatment exposure and subsequent changes."
+    },
+    {
+      "id": "stress",
+      "label": "Stress / environmental change",
+      "prior": 0.12,
+      "description": "Pattern associated with environmental change, hiding, appetite change or altered behavior."
+    },
+    {
+      "id": "respiratory",
+      "label": "Respiratory problem",
+      "prior": 0.08,
+      "description": "Pattern associated with abnormal respiratory effort or open-mouth breathing."
+    },
+    {
+      "id": "toxin_foreign",
+      "label": "Toxin / foreign material exposure",
+      "prior": 0.06,
+      "description": "Pattern associated with known or possible toxin or foreign-object exposure."
+    },
+    {
+      "id": "pain_injury",
+      "label": "Pain / injury",
+      "prior": 0.08,
+      "description": "Pattern associated with trauma, severe pain, collapse or mobility changes."
+    }
+  ],
+  "findings": [
+    {
+      "id": "appetite_normal",
+      "category": "Appetite",
+      "label": "Appetite normal",
+      "question": "Is appetite currently normal?"
+    },
+    {
+      "id": "appetite_reduced",
+      "category": "Appetite",
+      "label": "Appetite reduced",
+      "question": "Is appetite reduced?"
+    },
+    {
+      "id": "appetite_absent",
+      "category": "Appetite",
+      "label": "Refusing food",
+      "question": "Is the cat refusing food?"
+    },
+    {
+      "id": "vomit_single",
+      "category": "Vomiting",
+      "label": "Single vomiting episode",
+      "question": "Was there a single vomiting episode?"
+    },
+    {
+      "id": "vomit_repeated",
+      "category": "Vomiting",
+      "label": "Repeated vomiting / retching",
+      "question": "Has vomiting or retching repeated?"
+    },
+    {
+      "id": "vomit_blood",
+      "category": "Vomiting",
+      "label": "Blood in vomit",
+      "question": "Is there blood in the vomit?"
+    },
+    {
+      "id": "vomit_hairball",
+      "category": "Vomiting",
+      "label": "Hairball present",
+      "question": "Was a hairball produced or clearly present?"
+    },
+    {
+      "id": "stool_normal",
+      "category": "Stool",
+      "label": "Stool normal",
+      "question": "Is stool currently normal?"
+    },
+    {
+      "id": "stool_diarrhea",
+      "category": "Stool",
+      "label": "Diarrhea",
+      "question": "Is there diarrhea?"
+    },
+    {
+      "id": "stool_blood",
+      "category": "Stool",
+      "label": "Blood / black tarry stool",
+      "question": "Is stool bloody or black/tarry?"
+    },
+    {
+      "id": "urine_normal",
+      "category": "Urination",
+      "label": "Urination normal",
+      "question": "Is urination normal?"
+    },
+    {
+      "id": "urine_small_frequent",
+      "category": "Urination",
+      "label": "Frequent small urinations",
+      "question": "Are there frequent small urinations?"
+    },
+    {
+      "id": "urine_straining",
+      "category": "Urination",
+      "label": "Straining to urinate",
+      "question": "Is the cat straining to urinate?"
+    },
+    {
+      "id": "urine_none",
+      "category": "Urination",
+      "label": "Unable to urinate / no urine",
+      "question": "Is the cat unable to pass urine?"
+    },
+    {
+      "id": "urine_blood",
+      "category": "Urination",
+      "label": "Blood in urine",
+      "question": "Is there blood in the urine?"
+    },
+    {
+      "id": "energy_normal",
+      "category": "Energy",
+      "label": "Energy normal",
+      "question": "Is activity / energy normal?"
+    },
+    {
+      "id": "energy_low",
+      "category": "Energy",
+      "label": "Low energy / lethargy",
+      "question": "Is energy noticeably reduced?"
+    },
+    {
+      "id": "hiding",
+      "category": "Behavior",
+      "label": "Hiding / social withdrawal",
+      "question": "Is hiding or social withdrawal increased?"
+    },
+    {
+      "id": "resp_distress",
+      "category": "Breathing",
+      "label": "Difficulty breathing",
+      "question": "Is breathing difficult or labored?"
+    },
+    {
+      "id": "open_mouth_breathing",
+      "category": "Breathing",
+      "label": "Open-mouth breathing / panting",
+      "question": "Is there open-mouth breathing or panting?"
+    },
+    {
+      "id": "pain_severe",
+      "category": "Pain",
+      "label": "Severe / obvious pain",
+      "question": "Is there severe or obvious pain?"
+    },
+    {
+      "id": "collapse",
+      "category": "Neurologic",
+      "label": "Collapse / unresponsive",
+      "question": "Has the cat collapsed or become unresponsive?"
+    },
+    {
+      "id": "seizure",
+      "category": "Neurologic",
+      "label": "Seizure activity",
+      "question": "Has seizure activity occurred?"
+    },
+    {
+      "id": "fever_high",
+      "category": "Temperature",
+      "label": "Markedly elevated temperature",
+      "question": "Is a markedly elevated temperature documented?"
+    },
+    {
+      "id": "thirst_increased",
+      "category": "Water",
+      "label": "Increased thirst",
+      "question": "Has thirst clearly increased?"
+    },
+    {
+      "id": "weight_loss",
+      "category": "Weight",
+      "label": "Unplanned weight loss",
+      "question": "Has there been unplanned weight loss?"
+    },
+    {
+      "id": "food_change",
+      "category": "Context",
+      "label": "Recent food / treat change",
+      "question": "Was food or treats recently changed?"
+    },
+    {
+      "id": "medication_recent",
+      "category": "Context",
+      "label": "Recent medication / treatment",
+      "question": "Was medication or treatment recently given?"
+    },
+    {
+      "id": "stress_event",
+      "category": "Context",
+      "label": "Recent stress / environmental change",
+      "question": "Was there a recent stressor or environmental change?"
+    },
+    {
+      "id": "toxin_possible",
+      "category": "Exposure",
+      "label": "Possible toxin exposure",
+      "question": "Is toxin exposure known or possible?"
+    },
+    {
+      "id": "foreign_object_possible",
+      "category": "Exposure",
+      "label": "Possible foreign-object ingestion",
+      "question": "Could a foreign object have been swallowed?"
+    },
+    {
+      "id": "trauma",
+      "category": "Exposure",
+      "label": "Recent trauma / injury",
+      "question": "Was there recent trauma or injury?"
+    }
+  ],
+  "likelihoods": {
+    "gi_irritation": {
+      "appetite_reduced": 0.66,
+      "appetite_absent": 0.42,
+      "vomit_single": 0.72,
+      "vomit_repeated": 0.7,
+      "vomit_blood": 0.18,
+      "vomit_hairball": 0.3,
+      "stool_diarrhea": 0.55,
+      "energy_low": 0.42,
+      "food_change": 0.38,
+      "pain_severe": 0.16,
+      "urine_normal": 0.58
+    },
+    "dietary": {
+      "appetite_reduced": 0.54,
+      "vomit_single": 0.55,
+      "vomit_repeated": 0.4,
+      "stool_diarrhea": 0.6,
+      "food_change": 0.82,
+      "energy_low": 0.24,
+      "stress_event": 0.22,
+      "urine_normal": 0.64
+    },
+    "hairball": {
+      "vomit_single": 0.64,
+      "vomit_repeated": 0.52,
+      "vomit_hairball": 0.88,
+      "appetite_reduced": 0.36,
+      "stool_normal": 0.58,
+      "foreign_object_possible": 0.38,
+      "energy_low": 0.22,
+      "urine_normal": 0.65
+    },
+    "urinary": {
+      "urine_small_frequent": 0.78,
+      "urine_straining": 0.76,
+      "urine_none": 0.95,
+      "urine_blood": 0.52,
+      "appetite_reduced": 0.42,
+      "energy_low": 0.5,
+      "hiding": 0.46,
+      "pain_severe": 0.44,
+      "vomit_repeated": 0.24
+    },
+    "systemic": {
+      "appetite_reduced": 0.62,
+      "appetite_absent": 0.54,
+      "energy_low": 0.76,
+      "fever_high": 0.55,
+      "hiding": 0.48,
+      "vomit_repeated": 0.34,
+      "stool_diarrhea": 0.28,
+      "weight_loss": 0.34
+    },
+    "medication": {
+      "medication_recent": 0.88,
+      "appetite_reduced": 0.42,
+      "vomit_single": 0.34,
+      "vomit_repeated": 0.28,
+      "energy_low": 0.38,
+      "stool_diarrhea": 0.24
+    },
+    "stress": {
+      "stress_event": 0.88,
+      "hiding": 0.7,
+      "appetite_reduced": 0.56,
+      "energy_low": 0.3,
+      "vomit_single": 0.26,
+      "stool_normal": 0.52,
+      "urine_normal": 0.54
+    },
+    "respiratory": {
+      "resp_distress": 0.9,
+      "open_mouth_breathing": 0.82,
+      "energy_low": 0.52,
+      "appetite_reduced": 0.36,
+      "collapse": 0.2
+    },
+    "toxin_foreign": {
+      "toxin_possible": 0.86,
+      "foreign_object_possible": 0.75,
+      "vomit_repeated": 0.56,
+      "vomit_blood": 0.26,
+      "appetite_absent": 0.44,
+      "energy_low": 0.54,
+      "collapse": 0.26,
+      "seizure": 0.2,
+      "pain_severe": 0.32
+    },
+    "pain_injury": {
+      "trauma": 0.86,
+      "pain_severe": 0.74,
+      "collapse": 0.38,
+      "energy_low": 0.52,
+      "hiding": 0.52,
+      "appetite_reduced": 0.38
+    }
+  },
+  "urgencyRules": [
+    {
+      "id": "breathing",
+      "level": "emergency",
+      "findings": [
+        "resp_distress",
+        "open_mouth_breathing"
+      ],
+      "match": "any",
+      "title": "Breathing difficulty",
+      "message": "Difficulty breathing or open-mouth breathing in a cat warrants immediate veterinary assessment."
+    },
+    {
+      "id": "urinary_block",
+      "level": "emergency",
+      "findings": [
+        "urine_none"
+      ],
+      "match": "any",
+      "title": "Unable to urinate",
+      "message": "Inability to pass urine is an emergency."
+    },
+    {
+      "id": "collapse_seizure",
+      "level": "emergency",
+      "findings": [
+        "collapse",
+        "seizure"
+      ],
+      "match": "any",
+      "title": "Collapse or seizure",
+      "message": "Collapse, unresponsiveness, or seizure activity warrants emergency veterinary care."
+    },
+    {
+      "id": "toxin",
+      "level": "emergency",
+      "findings": [
+        "toxin_possible"
+      ],
+      "match": "any",
+      "title": "Possible toxin exposure",
+      "message": "Known or suspected toxin exposure should be discussed with a veterinarian or animal poison service immediately."
+    },
+    {
+      "id": "blood_vomit_stool",
+      "level": "urgent",
+      "findings": [
+        "vomit_blood",
+        "stool_blood"
+      ],
+      "match": "any",
+      "title": "Blood observed",
+      "message": "Blood in vomit or stool can require urgent veterinary assessment."
+    },
+    {
+      "id": "urinary_straining",
+      "level": "urgent",
+      "findings": [
+        "urine_straining"
+      ],
+      "match": "any",
+      "title": "Straining to urinate",
+      "message": "Urinary straining can become life-threatening, particularly if little or no urine is produced."
+    },
+    {
+      "id": "repeated_vomit_low_energy",
+      "level": "urgent",
+      "findings": [
+        "vomit_repeated",
+        "energy_low"
+      ],
+      "match": "all",
+      "title": "Repeated vomiting with lethargy",
+      "message": "Repeated vomiting together with lethargy or weakness warrants prompt veterinary assessment."
+    },
+    {
+      "id": "severe_pain",
+      "level": "urgent",
+      "findings": [
+        "pain_severe"
+      ],
+      "match": "any",
+      "title": "Severe pain",
+      "message": "Severe or obvious pain warrants prompt veterinary assessment."
+    }
+  ],
+  "sources": [
+    {
+      "name": "Cornell University College of Veterinary Medicine \u2014 Urgent Care",
+      "url": "https://www.vet.cornell.edu/hospitals/services/urgent-care",
+      "role": "Emergency red-flag examples"
+    },
+    {
+      "name": "Cornell University College of Veterinary Medicine \u2014 Emergency and Critical Care",
+      "url": "https://www.vet.cornell.edu/hospitals/services/emergency-and-critical-care-0",
+      "role": "Emergency red-flag examples"
+    },
+    {
+      "name": "VCA Animal Hospitals \u2014 Emergencies in Cats",
+      "url": "https://vcahospitals.com/know-your-pet/emergencies-in-cats",
+      "role": "Emergency context and owner-facing guidance"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0d1726" />
+  <meta name="description" content="A local-first Bayesian symptom and observation tracker for cats." />
+  <title>Bayesian Symptom Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">B</div>
+        <div><strong>Bayesian</strong><span>Symptom Tracker</span></div>
+      </div>
+      <nav id="nav">
+        <button data-view="dashboard" class="active"><span>◫</span> Dashboard</button>
+        <button data-view="log"><span>＋</span> Log observation</button>
+        <button data-view="timeline"><span>≋</span> Timeline</button>
+        <button data-view="model"><span>∿</span> Model</button>
+        <button data-view="reports"><span>▤</span> Reports</button>
+        <button data-view="settings"><span>⚙</span> Settings</button>
+      </nav>
+      <div class="sidebar-foot">
+        <span class="local-pill">● Local only</span>
+        <small>Data stays in this browser unless you export it.</small>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" aria-label="Open navigation">☰</button>
+        <div>
+          <h1 id="viewTitle">Dashboard</h1>
+          <p id="viewSubtitle">Track observations, episodes, and how the evidence shifts.</p>
+        </div>
+        <div class="top-actions">
+          <button class="ghost" id="episodeButton">Current episode ▾</button>
+          <button class="primary" id="quickLog">＋ Log observation</button>
+        </div>
+      </header>
+
+      <section id="appContent" class="content"></section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop hidden" id="modalBackdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div><span class="eyebrow" id="modalEyebrow">OBSERVATION</span><h2 id="modalTitle">Log observation</h2></div>
+        <button class="icon-button" id="closeModal" aria-label="Close">×</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>
