@@ -105,7 +105,7 @@ form{display:grid;gap:15px}.field{display:grid;gap:7px}.field label{font-size:12
 .warning-chip{color:var(--warning)!important;border-color:rgba(242,189,102,.35)!important}
 @media(max-width:850px){.monitor-item{grid-template-columns:1fr}.monitor-actions{min-width:0}.monitor-actions .question-actions{justify-content:flex-start}}
 
-/* v0.7.1 retrospective entry-date controls */
+/* v0.8 retrospective entry/replay date controls */
 .date-entry-helper{display:grid;gap:6px;margin-top:2px}
 .date-entry-helper .compact-row{padding-top:0;gap:6px}
 .date-entry-helper .mini{font-size:10px;padding:4px 7px}

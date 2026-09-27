@@ -1,4 +1,4 @@
-# Bayesian Symptom Tracker v0.7.1
+# Bayesian Symptom Tracker v0.8.0
 
 A local-first, GitHub Pages–compatible feline longitudinal health record and transparent Bayesian differential-pattern tracker.
 
@@ -22,7 +22,65 @@ The monitoring pipeline is separate:
 
 `raw observations → current symptom/state summary → elapsed time + uncertainty + discriminatory value → reassessment queue`
 
-## v0.7.1 retrospective entry-date workflow
+
+## v0.8 case replay / as-of analysis
+
+v0.8 adds a **case replay** layer for rigorous retrospective reconstruction. This is designed for situations where a complete historical case is already stored but the user wants to ask, “What would the model have known at this point in time?” without allowing later evidence to leak backward.
+
+Each episode can now use either:
+
+- **Use all episode evidence** — the normal longitudinal analysis.
+- **Replay / analyze as of a date** — only dated evidence at or before the cutoff is allowed into inference.
+
+When replay is active, the cutoff applies consistently to:
+
+- owner-observation evidence
+- clinical measurements and quantitative trends
+- monitoring/reassessment state
+- urgency-rule state
+- expected-information-gain / useful-next-observation prompts
+- dated prior diagnoses
+- explicitly linked historical episode evidence
+
+Later records remain stored and visible in the full timeline. They are excluded from inference rather than deleted or copied.
+
+The Model page provides **First evidence**, **Previous**, **Next**, and **Latest evidence** controls plus a direct cutoff date/time field. It also shows a read-only **differential trajectory** that replays selected evidence timestamps and reports the leading three condition-pattern scores at each snapshot. While replay is active, that trajectory stops at the current cutoff so it cannot reveal future snapshots. The trajectory does not mutate the saved episode or the current cutoff.
+
+For retrospective data entry, `entryDateMode = analysis_cutoff` can make new observation, clinical-result, treatment, and diagnostic-study forms default to the current replay point. If **advance replay cutoff on save** is enabled, saving a record at or after the current replay point advances the analysis to that record; backfilling an older record does not rewind the replay automatically.
+
+This creates a reproducible blinded-case workflow:
+
+`set replay point → inspect differential → ask useful next question → enter only evidence known by then → advance replay → repeat`
+
+The replay feature changes **which evidence is in scope**, not any disease prior, likelihood, or evidence weight. v0.8 intentionally leaves the v0.7 knowledge pack unchanged.
+
+## Reference outcomes and blinded validation
+
+v0.8 also adds a deliberately separate **reference-outcome** record for retrospective model evaluation. A reference outcome is the known final diagnosis or other case label used to check how the differential behaved; it is **not** a diagnosis-prior record and never enters Bayesian inference.
+
+A reference outcome can store:
+
+- a condition from the differential library or a custom outcome label
+- outcome date
+- certainty (confirmed / probable / suspected / historical record)
+- source (veterinarian, specialist, pathology, necropsy, medical record, other, or owner-entered)
+- notes / provenance
+- whether the answer should remain hidden during replay until its recorded date
+
+When **Hide this answer during replay** is enabled, the Model page reports that a validation outcome exists but does not reveal its label before the outcome date. After the replay reaches that date—or when all-evidence analysis is restored—the outcome is revealed together with the condition's current differential rank when it maps to the condition library.
+
+Reference outcomes are intentionally non-inferential. They do **not** alter:
+
+- priors
+- condition likelihoods
+- owner or clinical evidence weights
+- useful-next-observation / information-gain calculations
+- monitoring or reassessment queues
+- urgency rules
+
+This makes a historical case usable as a reproducible audit case without teaching the model the answer it is being evaluated against. Blinding is a UI/workflow aid, not encryption; exported backups still contain the reference-outcome record.
+
+## Retrospective entry-date workflow
 
 Retrospective reconstruction now has an explicit **new-entry date default** per episode:
 
@@ -128,7 +186,7 @@ Diagnostic studies retain ultrasound, radiograph, echocardiogram, CT/MRI, cytolo
 
 Diet records retain food form, product, date range, moisture, protein, fat, fiber, carbohydrate, phosphorus, nutrient basis, amount, and source.
 
-These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential in v0.7.1.
+These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential in v0.8.0.
 
 ## Urgency rules
 
@@ -167,13 +225,16 @@ Reports can optionally include the Bayesian model, urgency history, clinical res
 
 ## Migration
 
-v0.7.1 migrates earlier state automatically to **state schema 7**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, settings, and linked history are preserved.
+v0.8.0 migrates earlier state automatically to **state schema 8**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, reference outcomes, settings, and linked history are preserved.
 
 New episode fields are:
 
 - `trackingMode`: `live` or `retrospective`
 - `monitoringCadence`: `intensive`, `standard`, or `sparse`
-- `entryDateMode`: `latest_evidence` or `current_time`
+- `entryDateMode`: `analysis_cutoff`, `latest_evidence`, or `current_time`
+- `analysisMode`: `all_evidence` or `as_of`
+- `analysisCutoff`: optional ISO timestamp used by retrospective replay
+- `advanceReplayOnSave`: whether a newly saved record at/after the replay point advances the cutoff
 
 Always export a JSON backup before replacing a deployed version.
 

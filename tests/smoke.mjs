@@ -52,7 +52,7 @@ const scoreBefore=run(`infer().map(x=>x.score).join(',')`);run(`state.episodes[0
 const newQs=run(`newObservationCandidates(200)`);assert(!newQs.some(x=>x.finding.stateGroup==='appetite_state'),'recorded state group excluded from new-question queue');
 // Current urgency remains deterministic.
 run(`state.observations=[{id:'u',episodeId:state.settings.activeEpisodeId,findingId:'urine_none',status:'present',present:true,time:new Date().toISOString(),severity:'high',confidence:'high',notes:''}];`);assert(run(`urgencyAlerts().some(a=>a.level==='emergency')`),'urinary emergency rule');
-console.log('PASS v0.7.1 app with v0.7 knowledge integrity and provenance');
+console.log('PASS v0.8.0 app with v0.7 knowledge integrity and provenance');
 console.log('PASS broad canonical condition scenarios');
 console.log('PASS longitudinal temporal aggregation, resolution, and state transitions');
 console.log('PASS quantitative clinical evidence weighting and trend derivation');

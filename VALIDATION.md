@@ -1,4 +1,4 @@
-# Bayesian Symptom Tracker v0.7.1 — Validation Record
+# Bayesian Symptom Tracker v0.8.0 — Validation Record
 
 Date: 2026-09-26
 
@@ -14,7 +14,7 @@ Passed:
 - GitHub Pages uses relative local assets only
 - service worker caches `cat-knowledge-v0.7.json`
 - no server-side dependency introduced
-- service-worker cache key bumped for v0.7.1 asset refresh
+- service-worker cache key bumped for v0.8.0 asset refresh
 
 ## Knowledge-pack / inference regression tests
 
@@ -34,13 +34,49 @@ Passed:
 
 ## Retrospective entry-date regression tests
 
-v0.7.1 adds explicit tests that:
+Retrospective entry-date tests verify that:
 
 - legacy historical episodes migrate to `entryDateMode = latest_evidence`
 - a retrospective episode prefills new observations from its latest recorded evidence timestamp rather than wall-clock time
 - the observation form exposes one-click **Use latest episode entry** and **Use current time** controls
 - changing the entry-date default does not change Bayesian condition scores
 - live/default episodes retain current-time entry behavior unless the user explicitly chooses otherwise
+
+
+## Case replay / as-of regression tests
+
+v0.8 adds explicit tests that:
+
+- replay mode excludes observations dated after the analysis cutoff
+- replay mode excludes clinical measurements dated after the cutoff
+- a future emergency finding cannot trigger the current as-of urgency state
+- a future dated diagnosis cannot modify priors before its date
+- an undated diagnosis is excluded from strict as-of priors because its availability cannot be time-ordered
+- advancing the cutoff makes later evidence available without rewriting raw records
+- the useful-next-observation queue is computed only from evidence available as of the cutoff
+- future observations do not suppress questions that would still have been unknown at the replay point
+- `analysis_cutoff` entry-date mode uses the replay point rather than wall-clock time
+- saving a record at or after the replay point can advance the cutoff when enabled
+- backfilling an older record does not automatically rewind the cutoff
+- Model rendering exposes the evidence-scope controls and excluded-record count
+- replay trajectory calculations do not mutate the saved episode or current cutoff
+- replay trajectories stop at the current cutoff and do not expose future snapshots
+
+The replay scope is also applied to linked historical evidence and dated diagnosis priors to avoid hindsight leakage.
+
+## Reference-outcome / blinded-validation regression tests
+
+v0.8 also verifies that:
+
+- migration creates the reference-outcome collection without changing existing records
+- adding a known reference outcome leaves every Bayesian condition score unchanged
+- reference outcomes never appear in model evidence, monitoring, or urgency state
+- a replay cutoff earlier than a hidden outcome date blinds the answer and its notes in the Model validation card
+- advancing beyond the recorded outcome date reveals the reference outcome
+- a library-mapped outcome can report the model's current differential rank for audit purposes
+- the user can explicitly disable replay blinding without making the outcome inferential
+
+Reference-outcome labels are therefore suitable for retrospective evaluation, but they are not included in any target-answer regression assertion.
 
 ## Monitoring / reassessment regression tests
 
@@ -59,11 +95,11 @@ v0.7 adds explicit tests that:
 
 `node tests/state-smoke.mjs` passes:
 
-- previous state migrates to state schema 7
+- previous state migrates to state schema 8
 - episode tracking mode and monitoring cadence are created without removing older records
 - legacy clearly historical episodes migrate to retrospective tracking
 - retrospective monitoring uses the latest episode evidence as its reference rather than wall-clock time
-- diagnoses, treatments, studies, and linked-episode structures remain intact
+- diagnoses, treatments, studies, reference outcomes, and linked-episode structures remain intact
 - diet remains non-inferential
 - treatments remain non-inferential
 - diagnostic-study narrative context remains non-inferential
@@ -80,7 +116,7 @@ v0.7 adds explicit tests that:
 
 The user-supplied historical JSON remains an **audit case**, not a target-answer regression test. No test asserts that diabetes, CKD, or any other condition must rank first.
 
-Running the unchanged case through v0.7.1 gives the same inference ordering as v0.7 because the entry-date workflow does not alter priors, likelihoods, or existing evidence timestamps:
+Running the unchanged case through v0.8.0 with **all evidence** produces the same ordering as v0.7.x because v0.8 does not change the knowledge pack, priors, likelihoods, or evidence weights:
 
 - Diabetes mellitus: **15.92%** relative pattern-consistency
 - Diabetic ketoacidosis: **4.12%**
@@ -93,13 +129,13 @@ Migration identifies the supplied historical episode as retrospective. Its monit
 
 ## Browser rendering
 
-A fresh end-to-end browser screenshot is not required for the v0.7.1 inference checks. Chromium can launch in this environment, but navigation to the local HTTP test server is blocked by the container/browser administrator policy (`ERR_BLOCKED_BY_ADMINISTRATOR`).
+Chromium can launch in this environment, but navigation to the local HTTP test server remains blocked by the container/browser administrator policy (`ERR_BLOCKED_BY_ADMINISTRATOR`).
 
-Application-side rendering and timestamp-default behavior are exercised through the Node VM regression suite.
+Application-side rendering, replay scoping, trajectory rendering, and timestamp-default behavior are exercised through the Node VM regression suite. A standalone rendered-HTML snapshot was generated during development, but Chromium image capture did not complete reliably in this container, so this release does not claim a browser screenshot smoke test.
 
 ## Important model limitations
 
-v0.7.1 remains an experimental inference framework and is **not clinically validated**.
+v0.8.0 remains an experimental inference framework and is **not clinically validated**.
 
 Important remaining work includes:
 
