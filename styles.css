@@ -110,3 +110,9 @@ form{display:grid;gap:15px}.field{display:grid;gap:7px}.field label{font-size:12
 .date-entry-helper .compact-row{padding-top:0;gap:6px}
 .date-entry-helper .mini{font-size:10px;padding:4px 7px}
 @media(max-width:650px){.date-entry-helper .compact-row>*{flex:0 1 auto}}
+
+/* v0.10 differential-workup / clinical narrowing */
+.workup-dot{background:#f0a7ff!important;box-shadow:0 0 0 4px rgba(240,167,255,.09)!important}
+.differential-grid{align-items:start}
+.table td small{color:var(--muted);line-height:1.35}
+@media(max-width:700px){.table th,.table td{padding:9px 10px}.card-head{flex-wrap:wrap}}

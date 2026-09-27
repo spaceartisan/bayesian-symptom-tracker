@@ -1,4 +1,4 @@
-# Bayesian Symptom Tracker v0.9.0
+# Bayesian Symptom Tracker v0.10.0
 
 A local-first, GitHub Pages–compatible feline longitudinal health record and transparent Bayesian differential-pattern tracker.
 
@@ -12,7 +12,8 @@ This project is intentionally **not a casual symptom checker**. It is designed t
 4. **Retain known history.** Previous diagnoses can be stored with status, certainty/source, date, stage/grade, and provenance, and can optionally modify prior context.
 5. **Distinguish evidence types.** Owner observations, clinical measurements, quantitative trends, diagnoses, treatments, studies, and diet are stored differently because they do not carry the same evidentiary meaning.
 6. **Separate inference from monitoring.** The Bayesian engine estimates relative pattern consistency; the monitoring engine decides which already-recorded findings may be worth reassessing. Monitoring cadence never changes disease likelihoods.
-7. **Keep everything auditable.** Derived evidence, temporal summaries, dependency discounts, quantitative weighting, prior adjustments, and monitoring priorities are inspectable.
+7. **Separate model evidence from clinical narrowing.** A veterinarian's differential judgment is recorded as a dated, sourced workup milestone and is never silently credited to the Bayesian model.
+8. **Keep everything auditable.** Derived evidence, temporal summaries, dependency discounts, quantitative weighting, prior adjustments, workup constraints, and monitoring priorities are inspectable.
 
 The inference pipeline is:
 
@@ -22,6 +23,62 @@ The monitoring pipeline is separate:
 
 `raw observations → current symptom/state summary → elapsed time + uncertainty + discriminatory value → reassessment queue`
 
+
+
+## v0.10 differential workup and clinical narrowing
+
+v0.10 adds a dedicated **Differential** workspace for recording how a real veterinary workup narrows over time. This layer is deliberately separate from the Bayesian pattern model so that clinician judgment, pathology, imaging, or exclusion decisions are not mistaken for model-generated evidence.
+
+A workup milestone can record:
+
+- a mapped condition from the knowledge pack or a custom label
+- status: **Under consideration**, **Less likely**, **Ruled out**, **Supported**, **Confirmed**, or **Final diagnosis**
+- exact date/time
+- source: veterinarian, specialist, laboratory, imaging, cytology, pathology, necropsy, medical record, owner-entered, or other
+- certainty
+- optional linked supporting/basis record (observation, clinical measurement, diagnostic study, or diagnosis)
+- rationale / exclusion reasoning
+- provenance notes
+- whether the milestone should remain record-only or act as an explicit clinical constraint
+
+### Model-before-workup vs combined differential
+
+The Differential page shows two rankings side by side:
+
+1. **Model before workup** — the app's ordinary evidence model, including in-scope owner observations, clinical results, temporal summaries, demographics, explicitly enabled prior diagnoses, and explicitly linked historical episodes, but **excluding differential-workup constraints**.
+2. **Combined differential** — the same model after any explicitly enabled current-episode workup constraints are applied.
+
+This separation is important for auditability. If a veterinarian rules out IBD after endoscopy/pathology, the combined differential may suppress IBD, but the app still preserves what its evidence model thought immediately before that exclusion.
+
+### Explicit workup constraints
+
+Workup milestones are **record-only by default unless the user deliberately enables a clinical constraint**. `Under consideration` is always record-only. Custom/unmapped condition labels are also record-only because there is no safe library condition to constrain.
+
+When enabled for a mapped condition, the workup layer uses finite, inspectable heuristic multipliers rather than zeroing a condition or pretending the milestone is a calibrated diagnostic likelihood ratio. Available user-selected strengths are:
+
+| Strength | Support factor | Suppression factor |
+| --- | ---: | ---: |
+| Weak | 1.35× | 0.74× |
+| Moderate | 1.90× | 0.50× |
+| Strong | 4.00× | 0.18× |
+| Definitive | 12.00× | 0.03× |
+
+These factors are **workflow controls, not clinically validated LRs**. They make an explicit clinician-entered narrowing decision visible and reproducible while keeping the underlying model score separately inspectable.
+
+Only the **latest eligible milestone for a condition in the current episode** supplies its active workup constraint. Earlier milestones remain in the diagnostic journey but are not multiplied together. A later record-only / under-consideration milestone therefore supersedes an earlier constraint without deleting history.
+
+Workup milestones from linked historical episodes never silently constrain the current episode. They remain historical context unless separately represented through the app's explicit linked-history/prior-diagnosis mechanisms.
+
+### Replay and validation isolation
+
+Workup milestones participate in retrospective replay by date. A future exclusion or pathology result cannot affect an earlier replay point.
+
+Validation now reports **paired performance**:
+
+- **Model-only rank/score** — excludes differential-workup constraints.
+- **Combined rank/score** — includes only eligible workup constraints that were known by that validation cutoff.
+
+Strict validation blindness also excludes confirming/final-diagnosis workup milestones at or after the evaluation cutoff where they could reveal the target answer. This prevents the app from claiming model skill that actually came from the veterinarian's narrowing process or final pathology/necropsy result.
 
 
 ## v0.9 blinded case-validation workspace
@@ -213,7 +270,7 @@ Diagnostic studies retain ultrasound, radiograph, echocardiogram, CT/MRI, cytolo
 
 Diet records retain food form, product, date range, moisture, protein, fat, fiber, carbohydrate, phosphorus, nutrient basis, amount, and source.
 
-These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential in v0.9.0.
+These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential in v0.10.0. Differential-workup milestones are stored separately and affect the combined differential only when the user explicitly enables a mapped clinical constraint.
 
 ## Urgency rules
 
@@ -248,14 +305,21 @@ The app requires no server:
 - print / Save-to-PDF reports
 - `.nojekyll` for GitHub Pages
 - cohort-validation CSV export
+- dated differential-workup / clinical-narrowing history
 
-Reports can optionally include the Bayesian model, urgency history, clinical results, treatments, studies, diet, diagnoses/linked history, notes, and the derived longitudinal monitoring summary.
+Reports can optionally include the Bayesian model, urgency history, clinical results, treatments, studies, diet, diagnoses/linked history, differential-workup milestones, notes, and the derived longitudinal monitoring summary.
 
 ## Migration
 
-v0.9.0 migrates earlier state automatically to **state schema 9**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, reference outcomes, settings, and linked history are preserved. Existing reference outcomes gain `evaluationCutoff` and `strictDiagnosisBlind` defaults without changing inference.
+v0.10.0 migrates earlier state automatically to **state schema 10**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, reference outcomes, settings, linked history, replay configuration, and validation settings are preserved.
 
-New episode fields are:
+The new longitudinal record type is:
+
+- `workupEvents`: dated differential-workup milestones with condition/custom label, status, source, certainty, optional basis link, rationale, provenance notes, optional explicit-constraint flag, and constraint strength.
+
+Existing records do not acquire inferred workup decisions during migration. An upgraded case therefore produces the same underlying evidence-model result until the user explicitly adds workup milestones. Reference-outcome labels remain evaluation-only and are not converted into workup constraints.
+
+Episode fields retained from earlier versions include:
 
 - `trackingMode`: `live` or `retrospective`
 - `monitoringCadence`: `intensive`, `standard`, or `sparse`
@@ -264,10 +328,7 @@ New episode fields are:
 - `analysisCutoff`: optional ISO timestamp used by retrospective replay
 - `advanceReplayOnSave`: whether a newly saved record at/after the replay point advances the cutoff
 
-Reference outcomes additionally support:
-
-- `evaluationCutoff`: optional exact timestamp for judging the model
-- `strictDiagnosisBlind`: whether diagnosis priors dated on the cutoff day or later are excluded during validation
+Reference outcomes retain `evaluationCutoff` and `strictDiagnosisBlind`. Validation computes both model-only and combined-with-workup rank metrics without changing saved inference state.
 
 Always export a JSON backup before replacing a deployed version.
 
