@@ -1,4 +1,4 @@
-# Bayesian Symptom Tracker v0.8.0
+# Bayesian Symptom Tracker v0.9.0
 
 A local-first, GitHub Pages–compatible feline longitudinal health record and transparent Bayesian differential-pattern tracker.
 
@@ -22,6 +22,33 @@ The monitoring pipeline is separate:
 
 `raw observations → current symptom/state summary → elapsed time + uncertainty + discriminatory value → reassessment queue`
 
+
+
+## v0.9 blinded case-validation workspace
+
+v0.9 turns the v0.8 reference-outcome/replay foundation into a cohort-style validation system. The purpose is to evaluate the model against historical cases **without allowing known outcomes to train, bias, or alter inference**.
+
+The new **Validation** page provides:
+
+- all-pet or active-pet historical validation cohorts
+- top-1, top-3, and top-5 final-rank capture
+- mean reciprocal rank and median final rank
+- per-case final rank, best rank, first top-5 time, and reference-score trajectory
+- largest rank improvement / decline snapshots with the evidence added at that point
+- CSV export of visible/evaluable validation metrics
+- exclusion accounting for still-blinded outcomes, custom/unmapped outcomes, and cases without evaluable evidence
+
+Each mapped reference outcome is evaluated at an explicit **evaluation cutoff**. If no cutoff is supplied, the app uses the latest episode evidence on or before the recorded outcome date. This prevents later observations or tests from improving the retrospective score.
+
+Reference outcomes remain fully non-inferential. Validation temporarily replays the episode at the evaluation cutoff, computes rank metrics, and restores the current app state. It does not persist a different replay point or modify condition scores.
+
+### Strict diagnosis blindness
+
+A reference outcome can enable **Strict validation blindness** (default on). In that mode, diagnosis-prior records dated on the evaluation-cutoff day or later are conservatively excluded during validation. This prevents a final diagnosis from boosting its own retrospective rank when only date-level provenance is available. Earlier known diagnoses can still contribute as patient history.
+
+The validation workspace reports rank-based performance only. The model's normalized scores are still relative pattern-consistency values, **not calibrated disease probabilities**, so the app intentionally does not report accuracy-like probability calibration metrics such as Brier score or log loss.
+
+For very dense episodes, final-rank metrics are exact at the evaluation cutoff while trajectory display/first-capture analysis may be uniformly sampled for performance. Sampling is disclosed in the case detail.
 
 ## v0.8 case replay / as-of analysis
 
@@ -186,7 +213,7 @@ Diagnostic studies retain ultrasound, radiograph, echocardiogram, CT/MRI, cytolo
 
 Diet records retain food form, product, date range, moisture, protein, fat, fiber, carbohydrate, phosphorus, nutrient basis, amount, and source.
 
-These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential in v0.8.0.
+These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential in v0.9.0.
 
 ## Urgency rules
 
@@ -220,12 +247,13 @@ The app requires no server:
 - multiple pets
 - print / Save-to-PDF reports
 - `.nojekyll` for GitHub Pages
+- cohort-validation CSV export
 
 Reports can optionally include the Bayesian model, urgency history, clinical results, treatments, studies, diet, diagnoses/linked history, notes, and the derived longitudinal monitoring summary.
 
 ## Migration
 
-v0.8.0 migrates earlier state automatically to **state schema 8**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, reference outcomes, settings, and linked history are preserved.
+v0.9.0 migrates earlier state automatically to **state schema 9**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, reference outcomes, settings, and linked history are preserved. Existing reference outcomes gain `evaluationCutoff` and `strictDiagnosisBlind` defaults without changing inference.
 
 New episode fields are:
 
@@ -235,6 +263,11 @@ New episode fields are:
 - `analysisMode`: `all_evidence` or `as_of`
 - `analysisCutoff`: optional ISO timestamp used by retrospective replay
 - `advanceReplayOnSave`: whether a newly saved record at/after the replay point advances the cutoff
+
+Reference outcomes additionally support:
+
+- `evaluationCutoff`: optional exact timestamp for judging the model
+- `strictDiagnosisBlind`: whether diagnosis priors dated on the cutoff day or later are excluded during validation
 
 Always export a JSON backup before replacing a deployed version.
 

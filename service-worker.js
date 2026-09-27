@@ -1,4 +1,4 @@
-const CACHE='bst-v8-0';
+const CACHE='bst-v9-0';
 const ASSETS=['./','./index.html','./styles.css','./app.js','./data/cat-knowledge-v0.7.json','./manifest.webmanifest'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));

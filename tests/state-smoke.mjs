@@ -4,7 +4,7 @@ let code=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/\
 const k=JSON.parse(fs.readFileSync(new URL('../data/cat-knowledge-v0.7.json',import.meta.url),'utf8'));
 const ctx={console,crypto:crypto.webcrypto,setTimeout,clearTimeout,structuredClone,Intl,Date,Math,JSON,Map,Set,URL,Blob};vm.createContext(ctx);vm.runInContext(code,ctx);const run=s=>vm.runInContext(s,ctx);run(`knowledge=${JSON.stringify(k)};`);
 run(`state=migrateState({schemaVersion:3,pets:[{id:'p',name:'Cat',species:'cat',sex:'male',birthDate:'2020-01-01'}],episodes:[{id:'e',petId:'p',title:'Old',start:'2025-01-01T00:00:00Z',end:null,status:'open'}],observations:[],clinicalMeasurements:[],diets:[],settings:{activePetId:'p',activeEpisodeId:'e'}});`);
-assert(run('state.schemaVersion')===8,'state schema v8');assert(run('Array.isArray(state.diagnoses)'),'diagnoses created');assert(run('Array.isArray(state.treatments)'),'treatments created');assert(run('Array.isArray(state.studies)'),'studies created');assert(run('Array.isArray(state.outcomes)'),'reference outcomes created');assert(run('Array.isArray(state.episodes[0].linkedEpisodeIds)'),'episode links created');assert(['live','retrospective'].includes(run('state.episodes[0].trackingMode')),'tracking mode created');assert(run('state.episodes[0].monitoringCadence')==='standard','monitoring cadence created');assert(run("['latest_evidence','current_time','analysis_cutoff'].includes(state.episodes[0].entryDateMode)"),'entry date mode created');assert(run("['all_evidence','as_of'].includes(state.episodes[0].analysisMode)"),'analysis mode created');assert(run('state.episodes[0].advanceReplayOnSave')===true,'replay advance preference created');
+assert(run('state.schemaVersion')===9,'state schema v9');assert(run('Array.isArray(state.diagnoses)'),'diagnoses created');assert(run('Array.isArray(state.treatments)'),'treatments created');assert(run('Array.isArray(state.studies)'),'studies created');assert(run('Array.isArray(state.outcomes)'),'reference outcomes created');assert(run('Array.isArray(state.episodes[0].linkedEpisodeIds)'),'episode links created');assert(['live','retrospective'].includes(run('state.episodes[0].trackingMode')),'tracking mode created');assert(run('state.episodes[0].monitoringCadence')==='standard','monitoring cadence created');assert(run("['latest_evidence','current_time','analysis_cutoff'].includes(state.episodes[0].entryDateMode)"),'entry date mode created');assert(run("['all_evidence','as_of'].includes(state.episodes[0].analysisMode)"),'analysis mode created');assert(run('state.episodes[0].advanceReplayOnSave')===true,'replay advance preference created');assert(run(`state.settings.validationScope`)==='all_pets','validation scope created');
 // Diet remains context only.
 run(`state.observations=[{id:'o',episodeId:'e',findingId:'weight_loss',present:true,time:'2025-01-02T00:00:00Z',severity:'medium',confidence:'high',notes:''}];`);const before=run(`infer().map(x=>x.score).join(',')`);run(`state.diets.push({id:'d',petId:'p',product:'food',startDate:'2025-01-01',endDate:'',nutrientBasis:'as_fed',carbs:'1'})`);const after=run(`infer().map(x=>x.score).join(',')`);assert(before===after,'diet not inferential');
 run(`state.treatments.push({id:'tx',petId:'p',episodeId:'e',name:'therapy',type:'medication',start:'2025-01-02T00:00:00Z',response:'improved'});state.studies.push({id:'st',petId:'p',episodeId:'e',type:'ultrasound',time:'2025-01-03T00:00:00Z',interpretation:'abnormal',summary:'demo'})`);const afterContext=run(`infer().map(x=>x.score).join(',')`);assert(before===afterContext,'treatment/study context not inferential');
@@ -20,7 +20,7 @@ const contextHtml=run(`renderContextPage()`);assert(contextHtml.includes('data-a
 const historyHtml=run(`renderHistoryPage()`);assert(historyHtml.includes('data-add-diagnosis')&&historyHtml.includes('data-link-episode')&&historyHtml.includes('data-add-outcome'),'history UI exposes diagnosis, linked-episode, and reference-outcome controls');
 const modelHtml=run(`renderModelPage()`);assert(modelHtml.includes('Derived evidence contribution')&&modelHtml.includes('Inference architecture')&&modelHtml.includes('CASE REPLAY / EVIDENCE SCOPE'),'model UI exposes inference audit and replay controls');
 const monitoringHtml=run(`renderMonitoringPage()`);assert(monitoringHtml.includes('REASSESSMENT QUEUE')&&monitoringHtml.includes('NEW INFORMATION'),'monitoring UI exposes reassessment and new-information lanes');
-console.log('PASS migration to state schema v8');
+console.log('PASS migration to state schema v9');
 console.log('PASS diet/treatment/study context isolation');
 console.log('PASS diagnosis prior context');
 console.log('PASS optional linked-history evidence');
@@ -90,3 +90,35 @@ console.log('PASS blinded reference-outcome validation labels');
 
 console.log('PASS urgency trigger-time aging');
 console.log('PASS unit-safe quantitative trends');
+
+
+// v0.9 cohort validation evaluates mapped outcomes without leaking labels into inference.
+run(`state={...defaultState(),pets:[{id:'vp',name:'Validator',species:'cat',sex:'male',birthDate:'2019-01-01',weight:'',breed:'',neuterStatus:'unknown',bodyConditionScore:'',vetName:'',vetPhone:''}],episodes:[],observations:[],clinicalMeasurements:[],diets:[],diagnoses:[],treatments:[],studies:[],outcomes:[],settings:{...defaultState().settings,activePetId:'vp',validationScope:'all_pets'}};const ve=makeEpisode('vp','Validation case','2025-01-01T00:00:00Z');ve.id='ve';ve.trackingMode='retrospective';ve.analysisMode='all_evidence';state.episodes=[ve];state.settings.activeEpisodeId='ve';state.observations=[
+{id:'v1',episodeId:'ve',findingId:'thirst_increased',status:'present',present:true,time:'2025-01-02T12:00:00Z',severity:'high',confidence:'high',notes:''},
+{id:'v2',episodeId:'ve',findingId:'urine_increased',status:'present',present:true,time:'2025-01-03T12:00:00Z',severity:'high',confidence:'high',notes:''},
+{id:'v3',episodeId:'ve',findingId:'weight_loss',status:'present',present:true,time:'2025-01-04T12:00:00Z',severity:'high',confidence:'high',notes:''},
+{id:'vfuture',episodeId:'ve',findingId:'hindlimb_weakness',status:'present',present:true,time:'2025-02-10T12:00:00Z',severity:'high',confidence:'high',notes:''}
+];state.clinicalMeasurements=[{id:'vg',petId:'vp',episodeId:'ve',templateId:'blood_glucose',time:'2025-01-05T12:00:00Z',value:'400',unit:'mg/dL',refLow:'',refHigh:'',interpretation:'high',source:'vet_lab',confidence:'high',useInModel:true,notes:''}];state.outcomes=[{id:'vo',petId:'vp',episodeId:'ve',conditionId:'diabetes_mellitus',customLabel:'',date:'2025-01-06',certainty:'confirmed',source:'veterinarian',evaluationCutoff:'',strictDiagnosisBlind:true,hiddenDuringReplay:false,notes:''}];`);
+const validationInferenceBefore=run(`infer().map(x=>x.score).join(',')`);
+const validationActiveBefore=run(`state.settings.activePetId+'|'+state.settings.activeEpisodeId`);
+const vr=run(`validationResultForOutcome(state.outcomes[0],state.episodes[0],{maxPoints:50})`);
+assert(vr.status==='evaluated','mapped visible outcome is evaluable');
+assert(vr.cutoff.startsWith('2025-01-05'),'default validation cutoff uses latest evidence on/before outcome date');
+assert(vr.trajectory.every(x=>new Date(x.time)<=new Date(vr.cutoff)),'validation trajectory excludes future evidence');
+assert(Number.isFinite(vr.finalRank)&&vr.finalRank>=1,'validation final rank computed');
+assert(run(`infer().map(x=>x.score).join(',')`)===validationInferenceBefore,'validation calculation does not mutate current inference');assert(run(`state.settings.activePetId+'|'+state.settings.activeEpisodeId`)===validationActiveBefore,'validation calculation restores active pet and episode');
+// A diagnosis recorded on the evaluation day is conservatively blinded from the validation prior.
+run(`state.diagnoses=[{id:'same-day-dx',petId:'vp',conditionId:'diabetes_mellitus',status:'confirmed_active',date:'2025-01-05',source:'veterinarian',useInModel:true,notes:''}]`);
+const strictRank=run(`validationResultForOutcome(state.outcomes[0],state.episodes[0]).finalRank`);
+run(`state.outcomes[0].strictDiagnosisBlind=false`);
+const permissiveRank=run(`validationResultForOutcome(state.outcomes[0],state.episodes[0]).finalRank`);
+assert(permissiveRank<=strictRank,'allowing same-day diagnosis prior cannot make its mapped outcome rank worse in this audit case');
+run(`state.outcomes[0].strictDiagnosisBlind=true;state.diagnoses=[]`);
+// Blinded saved replay cases are excluded from aggregate cohort metrics.
+run(`state.episodes[0].analysisMode='as_of';state.episodes[0].analysisCutoff='2025-01-04T23:59:00Z';state.outcomes[0].hiddenDuringReplay=true`);
+const blindedCohort=run(`validationCohort()`);assert(blindedCohort.metrics.n===0&&blindedCohort.blinded===1,'blinded outcome excluded from cohort metrics');
+run(`state.episodes[0].analysisMode='all_evidence';state.outcomes[0].hiddenDuringReplay=true`);
+const cohort=run(`validationCohort()`);assert(cohort.metrics.n===1&&cohort.evaluated[0].finalRank===run('validationResultForOutcome(state.outcomes[0],state.episodes[0]).finalRank'),'visible mapped outcome enters cohort metrics');
+assert(run(`validationCsv()`).includes('final_rank'),'validation CSV export contains rank metrics');
+const validationHtml=run(`renderValidationPage()`);assert(validationHtml.includes('BLINDED CASE LIBRARY')&&validationHtml.includes('top-5 capture')&&validationHtml.includes('ACTIVE CASE VALIDATION'),'validation workspace renders cohort and case detail');
+console.log('PASS v0.9 blinded cohort validation metrics and strict cutoff isolation');
