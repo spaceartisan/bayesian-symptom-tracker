@@ -1,142 +1,144 @@
-# Bayesian Symptom Tracker v0.6.0
+# Bayesian Symptom Tracker v0.7.1
 
 A local-first, GitHub Pages–compatible feline longitudinal health record and transparent Bayesian differential-pattern tracker.
 
-This project is intentionally **not a casual symptom checker**. It is designed to retain a large amount of raw patient information over time, keep episodes analytically distinct, preserve provenance, and make the inference path inspectable. It does not diagnose disease and its numerical model is not clinically validated.
+This project is intentionally **not a casual symptom checker**. It is designed to retain large amounts of raw patient information over time, keep episodes analytically distinct, preserve provenance, derive longitudinal state from repeated records, and make the inference path inspectable. It does not diagnose disease and its numerical model is not clinically validated.
 
 ## Design principles
 
 1. **Preserve raw information.** A recorded event remains part of the history even if it never happens again.
-2. **Separate records from evidence.** The timeline can contain hundreds of entries without treating hundreds of correlated entries as hundreds of independent diagnostic tests.
+2. **Separate records from evidence.** Hundreds of timeline rows are not treated as hundreds of independent diagnostic tests.
 3. **Keep episodes separate by default.** Prior episodes influence a newer episode only when the user explicitly links them.
 4. **Retain known history.** Previous diagnoses can be stored with status, certainty/source, date, stage/grade, and provenance, and can optionally modify prior context.
 5. **Distinguish evidence types.** Owner observations, clinical measurements, quantitative trends, diagnoses, treatments, studies, and diet are stored differently because they do not carry the same evidentiary meaning.
-6. **Keep inference auditable.** The app exposes derived evidence, correlation discounts, temporal summaries, prior adjustments, and contribution to the leading condition.
+6. **Separate inference from monitoring.** The Bayesian engine estimates relative pattern consistency; the monitoring engine decides which already-recorded findings may be worth reassessing. Monitoring cadence never changes disease likelihoods.
+7. **Keep everything auditable.** Derived evidence, temporal summaries, dependency discounts, quantitative weighting, prior adjustments, and monitoring priorities are inspectable.
 
-The current pipeline is:
+The inference pipeline is:
 
 `raw longitudinal records → temporal/quantitative summaries → dependency-aware evidence → prior/history context → relative Bayesian pattern scores`
 
+The monitoring pipeline is separate:
+
+`raw observations → current symptom/state summary → elapsed time + uncertainty + discriminatory value → reassessment queue`
+
+## v0.7.1 retrospective entry-date workflow
+
+Retrospective reconstruction now has an explicit **new-entry date default** per episode:
+
+- **Latest episode entry** — prefill new observations, clinical results, treatment starts, and diagnostic-study dates from the most recent dated record in the active episode.
+- **Current date & time** — retain live-entry behavior.
+
+Historical episodes migrated into retrospective mode default to **Latest episode entry**. Live episodes default to **Current date & time**. The setting controls only the timestamp prefilled in new-entry forms; it never rewrites existing records and never changes Bayesian weights.
+
+Observation, clinical-result, treatment, and diagnostic-study forms expose one-click **Use latest episode entry** and **Use current time** buttons. In retrospective mode, answers from the monitoring / useful-next-observation prompts open the detailed observation form rather than silently stamping the current wall-clock time.
+
+This makes it practical to work through an old case sequentially without accidentally mixing 2025 evidence with 2026 entry timestamps. The user still controls the exact date and time of every saved record.
+
+## v0.7 longitudinal monitoring engine
+
+v0.7 replaces the old one-shot “next useful observation” behavior with two explicit lanes:
+
+- **Reassess ongoing/recurrent evidence.** Findings already observed can return to the queue as time passes. A repeated daily symptom is therefore monitored as persistence rather than treated as permanently “done.”
+- **Seek new information.** Unrecorded findings remain ranked by expected information gain, separately from follow-up of an existing symptom.
+
+The monitoring page exposes:
+
+- reassessments currently due
+- upcoming reassessments
+- last observation time
+- heuristic logging cadence
+- expected discriminatory value
+- current derived owner-evidence state
+- top unrecorded information opportunities
+- live vs retrospective monitoring reference
+
+Reassessment cadence is deliberately labeled a **data-quality heuristic**. It is not a veterinary follow-up recommendation and does not alter Bayesian likelihoods, priors, or urgency rules.
+
+### Monitoring actions
+
+For an ongoing state, the app can record that it is still present, has resolved, or has changed. For an event-type finding, the app can record recurrence or an explicit no-recurrence check. For previously absent findings, the app can record continued absence or a new occurrence.
+
+All of those actions append new raw observations. Earlier records remain intact.
+
+## Live vs retrospective episodes
+
+Episodes now have an explicit tracking mode:
+
+- **Live monitoring** uses the current clock for reassessment timing.
+- **Retrospective reconstruction** uses the latest evidence timestamp in the episode as its monitoring reference, so historical cases do not appear hundreds of days overdue merely because they are being entered later.
+
+Legacy episodes with evidence substantially predating their recorded episode start, or clearly historical open episodes, are conservatively migrated to retrospective mode. The user can change the mode at any time.
+
+Each episode also has a monitoring-density preference:
+
+- intensive
+- standard
+- sparse
+
+These preferences only change the reassessment queue. They have no effect on Bayesian scores.
+
 ## Longitudinal observations
 
-v0.6 supports three explicit observation outcomes:
+The tracker supports three explicit observation outcomes:
 
 - **Observed / present**
 - **Checked and not observed**
 - **Previously present — now resolved**
 
-This allows an event to stay historically true without forcing the user to delete it when it stops.
-
-Repeated entries are aggregated into temporal evidence. For example, repeated increased-thirst observations can establish persistence and duration, while a single vomiting event remains an isolated event. Repeated rows use saturating weights rather than unlimited multiplication.
+Repeated entries are aggregated into temporal evidence. For example, daily increased-thirst observations can establish persistence and duration while still retaining every raw timestamp. Repeated rows use saturating weights rather than unlimited multiplication.
 
 Mutually exclusive state groups such as appetite, thirst, urine volume, energy, and weight preserve earlier states as historical evidence while giving the latest state primary weight.
 
 ## Correlation-aware evidence
 
-v0.6 adds conservative dependency handling. Related evidence remains visible, but later evidence in the same physiological group is discounted rather than assumed independent.
+Related evidence remains visible, but evidence in the same physiological dependency group is discounted rather than assumed independent.
 
-Current groups include examples such as:
+Current groups include examples such as increased thirst + increased urine volume, blood glucose + urine glucose + fructosamine, creatinine + BUN + SDMA, hepatic markers, respiratory findings, and weight-change evidence.
 
-- increased thirst + increased urine volume
-- blood glucose + urine glucose + fructosamine
-- creatinine + BUN + SDMA
-- ALT + ALP + bilirubin
-- rapid/labored/open-mouth breathing
-- weight gain/loss evidence
-
-The correlation factors are inspectable in the versioned knowledge pack. They are heuristic dependency controls, not validated statistical covariance estimates.
+The correlation factors are inspectable in the versioned knowledge pack. They are heuristic dependency controls, not validated covariance estimates.
 
 ## Quantitative clinical trends
 
 Repeated numeric measurements are retained as full raw records and can also generate longitudinal trend summaries.
 
-The trend engine currently supports mappings for:
-
-- body weight → sustained gain/loss trend
-- creatinine → rising renal-marker trend
-- SDMA → rising renal-marker trend
-
-A derived trend requires multiple measurements, a minimum time span, sufficient net change, and a minimum linear-fit quality. Thresholds are deliberately conservative and inspectable in `data/cat-knowledge-v0.6.json`.
-
-**Units are never mixed in a regression.** Measurements with different units are kept as separate series unless a future version supplies an explicit validated conversion. This prevents, for example, lb and kg values from producing a meaningless slope.
+The trend engine currently supports mappings for body weight, creatinine, and SDMA. A derived trend requires multiple measurements, a minimum time span, sufficient net change, and a minimum linear-fit quality. Unlike units are never silently mixed in one regression.
 
 ## Clinical measurements
 
-Structured results can store:
+Structured results can store actual value and unit, date/time, laboratory reference interval, interpretation, source, confidence, episode association, notes, and whether the mapped result may enter the model.
 
-- actual value and unit
-- date/time
-- lab reference interval
-- interpretation
-- source
-- confidence
-- episode association
-- notes
-- whether the mapped result may enter the model
+Numeric clinical evidence retains magnitude when an appropriate quantitative anchor or supplied reference interval exists. Repeated mapped results are summarized as serial clinical evidence with saturating weight rather than multiplied as independent tests.
 
-Numeric clinical evidence retains magnitude where an appropriate quantitative anchor or user-supplied reference interval exists. Repeated mapped results are summarized as serial clinical evidence with a saturating weight rather than multiplied as independent tests.
-
-A numeric result is never automatically treated as a diagnosis. The model preserves competing explanations and the Model screen shows how much weight the record contributed.
+A numeric result is never automatically converted into a diagnosis.
 
 ## Prior diagnoses and linked episodes
 
-A diagnosis record can store:
-
-- library condition or custom condition
-- confirmed/probable/suspected active status, historical/resolved status, or ruled-out status
-- diagnosis date
-- veterinarian/specialist/pathology/imaging/lab/owner/other source
-- stage, grade, or qualifier
-- linked episode
-- notes and provenance
-- explicit **Use as prior context** switch
+A diagnosis record can store a library or custom condition, active/historical/ruled-out status, date, source, stage/grade, linked episode, notes/provenance, and an explicit **Use as prior context** switch.
 
 Diagnosis history modifies prior context rather than pretending the diagnosis is a current symptom.
 
-Episodes remain independent unless explicitly linked from **History**. Linked episode evidence is derived separately and enters the current model at a reduced historical weight; raw records are never copied into the new episode.
+Episodes remain independent unless explicitly linked from **History**. Linked evidence is derived separately and enters the current model at a reduced historical weight; raw records are never copied into the new episode. Linked episodes never populate the current episode’s monitoring queue.
 
-For retrospective cases, demographic age is calculated from the earlier of the episode start or the earliest attached evidence. A mistaken later episode creation date therefore does not silently make the patient older in the inference model. The History screen still warns when episode metadata begins after its evidence and offers an alignment control.
+## Treatments, diagnostic studies, and diet
 
-## Treatments and medications
+Treatments/interventions retain timing, dose, route, frequency, indication, source, adherence, response, adverse effects, provenance, and optional episode association.
 
-v0.6 adds structured treatment/intervention history:
+Diagnostic studies retain ultrasound, radiograph, echocardiogram, CT/MRI, cytology, histopathology, endoscopy, examination findings, and other narrative results with provenance.
 
-- medication, fluid therapy, procedure, supplement, diet therapy, or other
-- start/end time
-- dose
-- route
-- frequency
-- reason/indication
-- prescribing/directing source
-- adherence
-- observed response
-- adverse effects
-- notes/provenance
-- optional episode link
+Diet records retain food form, product, date range, moisture, protein, fat, fiber, carbohydrate, phosphorus, nutrient basis, amount, and source.
 
-Treatments and response are **context-only in v0.6**. They are intentionally not used as automatic diagnostic evidence because treatment choice and response can create circular reasoning without a carefully defined model.
-
-## Diagnostic studies
-
-Structured study records can retain ultrasound, radiograph, echocardiogram, CT, MRI, cytology, histopathology, endoscopy, examination findings, and other studies with date, body site, interpretation, source, result summary, provenance, and optional episode link.
-
-Free-text study results are **context-only in v0.6**. A future version can add structured evidence mappings without discarding the original report text.
-
-## Diet context
-
-Food records support food form, brand/product, date range, moisture, protein, fat, fiber, carbohydrate, phosphorus, nutrient basis, feeding amount, and nutrition-data source.
-
-Diet remains **context-only**. A low-carbohydrate food does not automatically increase or decrease a diabetes score, and a phosphorus value does not automatically push CKD. The raw context is preserved for longitudinal review and future defensible models.
+These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential in v0.7.1.
 
 ## Urgency rules
 
-Urgency is deterministic and independent of Bayesian ranking.
+Urgency remains deterministic and independent of Bayesian ranking. Each urgency flag is timestamped from the actual triggering observation. Closed episodes and sufficiently old triggers are labeled historical.
 
-v0.6 timestamps each urgency flag from the actual finding that triggered it. A newer unrelated lab result or diagnostic study can no longer make an old emergency observation look current. Closed episodes and sufficiently old triggering observations are labeled historical.
+Monitoring cadence is also independent of urgency; a “reassessment due” item is never presented as an emergency warning.
 
 ## Knowledge pack
 
-`data/cat-knowledge-v0.6.json` currently contains:
+`data/cat-knowledge-v0.7.json` currently contains:
 
 - **95 named feline condition patterns**
 - **1 Other / unmodeled reserve hypothesis**
@@ -144,9 +146,10 @@ v0.6 timestamps each urgency flag from the actual finding that triggered it. A n
 - **30 clinical findings** including derived trend findings
 - **30 structured measurement templates**
 - **17 family labels** including the reserve/Other family
+- explicit owner-finding monitoring classes and monitoring configuration
 - provenance references and inspectable inference settings
 
-The numerical priors, likelihoods, correlation factors, and trend weights are heuristic research values. They are **not** validated disease probabilities, sensitivities, specificities, or diagnostic likelihood ratios.
+The numerical priors, likelihoods, dependency factors, trend weights, demographic adjustments, and monitoring cadence values are heuristic research values. They are **not** validated disease probabilities, diagnostic likelihood ratios, or clinical follow-up schedules.
 
 ## Data storage and reports
 
@@ -156,29 +159,27 @@ The app requires no server:
 - IndexedDB local storage
 - service-worker offline support
 - JSON backup/restore
-- multi-pet records
+- multiple pets
 - print / Save-to-PDF reports
 - `.nojekyll` for GitHub Pages
 
-Reports can optionally include Bayesian model output, urgency flags, clinical results, treatments, studies, diet, notes, and historical context.
+Reports can optionally include the Bayesian model, urgency history, clinical results, treatments, studies, diet, diagnoses/linked history, notes, and the derived longitudinal monitoring summary.
 
 ## Migration
 
-v0.6 migrates earlier state automatically to **state schema 5**. It preserves existing pets, episodes, observations, clinical measurements, diets, diagnoses, and settings, while adding:
+v0.7.1 migrates earlier state automatically to **state schema 7**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, settings, and linked history are preserved.
 
-- explicit observation `status`
-- `treatments: []`
-- `studies: []`
-- newer report settings
-- linked-history structures where needed
+New episode fields are:
 
-Legacy `present: true/false` observations remain compatible and are converted to explicit present/checked-absent status.
+- `trackingMode`: `live` or `retrospective`
+- `monitoringCadence`: `intensive`, `standard`, or `sparse`
+- `entryDateMode`: `latest_evidence` or `current_time`
 
 Always export a JSON backup before replacing a deployed version.
 
 ## Reproducible knowledge-pack build
 
-`tools/upgrade_knowledge_v06.py` rebuilds the v0.6 knowledge pack from the retained v0.5 pack. It only transforms the knowledge pack; application/UI changes are not replayed by the script.
+`tools/upgrade_knowledge_v07.py` rebuilds the v0.7 knowledge pack from the retained v0.6 pack. The script adds monitoring metadata/configuration and does **not** modify priors or condition likelihoods.
 
 ## Development validation
 
@@ -188,7 +189,8 @@ Run:
 node --check app.js
 node tests/smoke.mjs
 node tests/state-smoke.mjs
-python -m json.tool data/cat-knowledge-v0.6.json > /dev/null
+python -m json.tool data/cat-knowledge-v0.7.json > /dev/null
+python tools/upgrade_knowledge_v07.py
 ```
 
-See `VALIDATION.md` for the regression coverage, supplied-case audit, browser-rendering limitation, and remaining model limitations.
+See `VALIDATION.md` for regression coverage, the blinded supplied-case audit, rendering limitations, and remaining model work.

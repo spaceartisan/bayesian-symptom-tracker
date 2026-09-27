@@ -93,3 +93,20 @@ form{display:grid;gap:15px}.field{display:grid;gap:7px}.field label{font-size:12
 .treatment-dot{background:#c18cff!important;box-shadow:0 0 0 4px rgba(193,140,255,.09)!important}
 .study-dot{background:#f2bd66!important;box-shadow:0 0 0 4px rgba(242,189,102,.09)!important}
 @media(max-width:650px){.trend-grid{grid-template-columns:1fr}}
+
+/* v0.7 longitudinal monitoring / reassessment */
+.monitor-list{display:grid;gap:10px}
+.monitor-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;border:1px solid var(--line);border-radius:13px;padding:14px;background:rgba(255,255,255,.014)}
+.monitor-item.due{border-color:rgba(242,189,102,.35);background:rgba(242,189,102,.035)}
+.monitor-main{min-width:0}.monitor-title{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.monitor-title strong{font-size:13px}.monitor-main p{margin:7px 0 6px;font-size:12px;line-height:1.45}.monitor-main small{display:block;color:var(--muted);margin-top:7px;line-height:1.4}
+.monitor-meta{display:flex;gap:7px;flex-wrap:wrap;color:var(--muted);font-size:10px}.monitor-meta span{border:1px solid rgba(34,52,77,.8);border-radius:99px;padding:4px 7px}
+.monitor-actions{min-width:260px}.monitor-actions .question-actions{justify-content:flex-end;margin:0}
+.opportunity-list{display:grid;gap:12px}.opportunity-list .question-card{border:1px solid var(--line);border-radius:12px;padding:13px;background:rgba(255,255,255,.012)}.opportunity-list .question-card h3{margin-top:0}
+.warning-chip{color:var(--warning)!important;border-color:rgba(242,189,102,.35)!important}
+@media(max-width:850px){.monitor-item{grid-template-columns:1fr}.monitor-actions{min-width:0}.monitor-actions .question-actions{justify-content:flex-start}}
+
+/* v0.7.1 retrospective entry-date controls */
+.date-entry-helper{display:grid;gap:6px;margin-top:2px}
+.date-entry-helper .compact-row{padding-top:0;gap:6px}
+.date-entry-helper .mini{font-size:10px;padding:4px 7px}
+@media(max-width:650px){.date-entry-helper .compact-row>*{flex:0 1 auto}}

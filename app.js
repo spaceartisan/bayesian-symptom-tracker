@@ -1,5 +1,5 @@
-const APP_VERSION = '0.6.0';
-const STATE_SCHEMA_VERSION = 5;
+const APP_VERSION = '0.7.1';
+const STATE_SCHEMA_VERSION = 7;
 const DB_NAME = 'BayesianSymptomTracker';
 const DB_VERSION = 1;
 const STORE = 'kv';
@@ -41,20 +41,20 @@ function makePet(seed={}){
   };
 }
 function makeEpisode(petId,title='Current episode',start=new Date().toISOString()){
-  return {id:uid(),petId,title,start,end:null,status:'open',linkedEpisodeIds:[]};
+  return {id:uid(),petId,title,start,end:null,status:'open',trackingMode:'live',monitoringCadence:'standard',entryDateMode:'current_time',linkedEpisodeIds:[]};
 }
 function defaultState(){
   const pet=makePet();
   const episode=makeEpisode(pet.id);
   return {
     schemaVersion:STATE_SCHEMA_VERSION, pets:[pet], episodes:[episode], observations:[], clinicalMeasurements:[], diets:[], diagnoses:[], treatments:[], studies:[],
-    settings:{activePetId:pet.id,activeEpisodeId:episode.id,modelPack:'cat-practical-differentials-v0.6',reportModel:true,reportUrgency:true,reportNotes:true,reportClinical:true,reportDiet:true,reportHistory:true,reportTreatments:true,reportStudies:true},
+    settings:{activePetId:pet.id,activeEpisodeId:episode.id,modelPack:'cat-practical-differentials-v0.7',reportModel:true,reportUrgency:true,reportNotes:true,reportClinical:true,reportDiet:true,reportHistory:true,reportTreatments:true,reportStudies:true,reportMonitoring:true},
     createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
   };
 }
 function migrateState(raw){
   const s=raw && typeof raw==='object' ? raw : defaultState();
-  s.settings={reportModel:true,reportUrgency:true,reportNotes:true,reportClinical:true,reportDiet:true,reportHistory:true,reportTreatments:true,reportStudies:true,...(s.settings||{})}; s.episodes ||= []; s.observations ||= []; s.clinicalMeasurements ||= []; s.diets ||= []; s.diagnoses ||= []; s.treatments ||= []; s.studies ||= [];
+  s.settings={reportModel:true,reportUrgency:true,reportNotes:true,reportClinical:true,reportDiet:true,reportHistory:true,reportTreatments:true,reportStudies:true,reportMonitoring:true,...(s.settings||{})}; s.episodes ||= []; s.observations ||= []; s.clinicalMeasurements ||= []; s.diets ||= []; s.diagnoses ||= []; s.treatments ||= []; s.studies ||= [];
   if(!Array.isArray(s.pets) || !s.pets.length){
     const legacy=s.profile||{}; const pet=makePet(legacy); s.pets=[pet];
     s.episodes.forEach(e=>{ if(!e.petId) e.petId=pet.id; });
@@ -62,7 +62,24 @@ function migrateState(raw){
   }
   s.pets=s.pets.map(p=>makePet(p));
   if(!s.pets.some(p=>p.id===s.settings.activePetId)) s.settings.activePetId=s.pets[0].id;
-  s.episodes.forEach(e=>{ if(!e.petId) e.petId=s.settings.activePetId; if(!Array.isArray(e.linkedEpisodeIds)) e.linkedEpisodeIds=[]; });
+  s.episodes.forEach(e=>{
+    if(!e.petId) e.petId=s.settings.activePetId;
+    if(!Array.isArray(e.linkedEpisodeIds)) e.linkedEpisodeIds=[];
+    if(!e.monitoringCadence) e.monitoringCadence='standard';
+    if(!e.trackingMode){
+      const times=[
+        ...s.observations.filter(o=>o.episodeId===e.id).map(o=>o.time),
+        ...s.clinicalMeasurements.filter(m=>m.episodeId===e.id).map(m=>m.time),
+        ...s.studies.filter(x=>x.episodeId===e.id).map(x=>x.time),
+        ...s.treatments.filter(t=>t.episodeId===e.id).flatMap(t=>[t.start,t.end].filter(Boolean))
+      ].map(x=>new Date(x).getTime()).filter(Number.isFinite);
+      const start=new Date(e.start||0).getTime(), first=times.length?Math.min(...times):NaN, last=times.length?Math.max(...times):NaN, now=Date.now();
+      const evidencePredatesStart=Number.isFinite(start)&&Number.isFinite(first)&&first<start-24*36e5;
+      const clearlyHistorical=Number.isFinite(last)&&(now-last)>30*24*36e5&&Number.isFinite(start)&&(now-start)>30*24*36e5;
+      e.trackingMode=(e.status==='closed'||evidencePredatesStart||clearlyHistorical)?'retrospective':'live';
+    }
+    if(!['latest_evidence','current_time'].includes(e.entryDateMode)) e.entryDateMode=e.trackingMode==='retrospective'?'latest_evidence':'current_time';
+  });
   const petId=s.settings.activePetId;
   let petEps=s.episodes.filter(e=>e.petId===petId).sort((a,b)=>new Date(b.start)-new Date(a.start));
   if(!petEps.length){ const ep=makeEpisode(petId); s.episodes.push(ep); petEps=[ep]; }
@@ -299,30 +316,130 @@ function familyScores(model=infer()){
   return [...totals.entries()].map(([label,score])=>({label,score})).sort((a,b)=>b.score-a.score);
 }
 function entropy(dist){ return -dist.reduce((s,x)=>s+(x.score>0?x.score*Math.log2(x.score):0),0); }
-function distributionAfterVirtual(baseObs,fid,present){
-  return infer([...baseObs,{findingId:fid,present,severity:'medium',confidence:'high',time:new Date().toISOString(),episodeId:state.settings.activeEpisodeId,id:'virtual'}]);
+function distributionAfterVirtual(baseObs,fid,present,weight=1){
+  return infer([...baseObs,{findingId:fid,present,severity:'medium',confidence:'high',weight,time:new Date().toISOString(),episodeId:state.settings.activeEpisodeId,id:'virtual'}]);
 }
-function nextBestQuestion(){
+function informationGainForFinding(fid,baseEvidence=modelEvidence(),virtualWeight=1){
+  const base=infer(baseEvidence), h0=entropy(base);
+  const py=base.reduce((sum,h)=>sum+h.score*(knowledge.likelihoods[h.id]?.[fid] ?? .5),0);
+  const y=distributionAfterVirtual(baseEvidence,fid,true,virtualWeight), n=distributionAfterVirtual(baseEvidence,fid,false,virtualWeight);
+  const expected=py*entropy(y)+(1-py)*entropy(n);
+  return {gain:Math.max(0,h0-expected),py};
+}
+function newObservationCandidates(limit=knowledge.monitoringConfig?.newQuestionLimit||6){
   const obs=episodeObservations();
   const used=new Set(obs.map(o=>o.findingId));
   const usedStateGroups=new Set(obs.map(o=>finding(o.findingId)?.stateGroup).filter(Boolean));
-  const baseEvidence=modelEvidence();
-  const base=infer(baseEvidence); const h0=entropy(base);
-  let best=null;
+  const baseEvidence=modelEvidence(), out=[];
   for(const f of knowledge.findings){
-    if(f.sourceType==='clinical') continue;
+    if(f.sourceType==='clinical' || f.monitoringClass==='context_once') continue;
     // State-group members are mutually exclusive at a point in time. Once a state
-    // has been recorded, don't ask a contradictory sibling as the next-best prompt.
-    // Users can still manually log a later state change from the observation form.
+    // has been recorded, contradictory siblings belong in reassessment/state-change
+    // workflows rather than the unrecorded-question queue.
     if(used.has(f.id) || (f.stateGroup && usedStateGroups.has(f.stateGroup))) continue;
-    const py=base.reduce((s,h)=>s+h.score*(knowledge.likelihoods[h.id]?.[f.id] ?? .5),0);
-    const y=distributionAfterVirtual(baseEvidence,f.id,true), n=distributionAfterVirtual(baseEvidence,f.id,false);
-    const expected=py*entropy(y)+(1-py)*entropy(n);
-    const gain=h0-expected;
-    if(!best || gain>best.gain) best={finding:f,gain,py};
+    const ig=informationGainForFinding(f.id,baseEvidence,1);
+    out.push({finding:f,...ig,kind:'new'});
   }
-  return best;
+  return out.sort((a,b)=>b.gain-a.gain).slice(0,limit);
 }
+function nextBestQuestion(){ return newObservationCandidates(1)[0]||null; }
+function episodeMonitoringReference(ep=activeEpisode()){
+  if(!ep) return new Date().toISOString();
+  const bounds=episodeEvidenceBounds(ep);
+  if(ep.trackingMode==='retrospective'){
+    const evidenceTimes=[ep.end,bounds?.last].filter(Boolean).map(x=>new Date(x).getTime()).filter(Number.isFinite);
+    if(evidenceTimes.length) return new Date(Math.max(...evidenceTimes)).toISOString();
+    return ep.start||new Date().toISOString();
+  }
+  if(ep.status==='closed'){
+    const times=[ep.end,bounds?.last,ep.start].filter(Boolean).map(x=>new Date(x).getTime()).filter(Number.isFinite);
+    return times.length?new Date(Math.max(...times)).toISOString():new Date().toISOString();
+  }
+  return new Date().toISOString();
+}
+function episodeLatestEvidenceTime(ep=activeEpisode()){
+  if(!ep) return new Date().toISOString();
+  const bounds=episodeEvidenceBounds(ep);
+  return bounds?.last || ep.start || new Date().toISOString();
+}
+function episodeEntryDefaultTime(ep=activeEpisode()){
+  if(ep?.entryDateMode==='latest_evidence') return episodeLatestEvidenceTime(ep);
+  return new Date().toISOString();
+}
+function entryDateModeLabel(ep=activeEpisode()){
+  return ep?.entryDateMode==='latest_evidence'?'Latest episode entry':'Current date & time';
+}
+function dateEntryHelperHtml(fieldName='time',ep=activeEpisode()){
+  const latest=episodeLatestEvidenceTime(ep);
+  return `<div class="date-entry-helper"><span class="helper">New-entry default: <strong>${escapeHtml(entryDateModeLabel(ep))}</strong>${ep?.entryDateMode==='latest_evidence'?` · ${fmtDateTime(latest)}`:''}</span><div class="button-row compact-row"><button type="button" class="mini" data-date-fill="latest" data-date-target="${escapeHtml(fieldName)}">Use latest episode entry</button><button type="button" class="mini" data-date-fill="now" data-date-target="${escapeHtml(fieldName)}">Use current time</button></div></div>`;
+}
+function bindDateEntryHelpers(root=document){
+  $$('[data-date-fill]',root).forEach(btn=>btn.onclick=()=>{
+    const target=root.querySelector(`[name="${btn.dataset.dateTarget}"]`); if(!target)return;
+    const iso=btn.dataset.dateFill==='latest'?episodeLatestEvidenceTime():new Date().toISOString();
+    target.value=toInputDate(iso);
+  });
+}
+function monitoringCadenceHours(f,last,ep=activeEpisode()){
+  const cfg=knowledge.monitoringConfig||{};
+  const cls=f?.monitoringClass || (f?.stateGroup?'state':'event');
+  let hours=cls==='state'||cls==='baseline_state'?(cfg.stateRecheckHours||24):(cfg.eventRecheckHours||48);
+  if(last?.present===false || ['checked_absent','resolved'].includes(last?.status)) hours=cfg.absenceRecheckHours||72;
+  if(cls==='baseline_state') hours*=cfg.baselineStateMultiplier||3;
+  hours*=cfg.cadenceFactors?.[ep?.monitoringCadence||'standard']||1;
+  hours*=cfg.confidenceCadenceFactors?.[last?.confidence||'high']||1;
+  if(last?.present!==false && last?.status!=='resolved') hours*=cfg.severityCadenceFactors?.[last?.severity||'medium']||1;
+  return Math.max(4,hours);
+}
+function monitoringCandidates(ep=activeEpisode()){
+  if(!ep) return [];
+  const obs=episodeObservations(ep.id), refIso=episodeMonitoringReference(ep), ref=new Date(refIso).getTime();
+  if(!obs.length || !Number.isFinite(ref)) return [];
+  const baseEvidence=modelEvidence(), cfg=knowledge.monitoringConfig||{}, virtualWeight=cfg.monitoringVirtualWeight||.45;
+  const byFinding=new Map(), byStateGroup=new Map();
+  obs.forEach(o=>{
+    if(!byFinding.has(o.findingId))byFinding.set(o.findingId,[]); byFinding.get(o.findingId).push(o);
+    const f=finding(o.findingId); if(f?.stateGroup){const prev=byStateGroup.get(f.stateGroup);if(!prev||new Date(o.time)>new Date(prev.time))byStateGroup.set(f.stateGroup,o);}
+  });
+  const candidateRecords=[];
+  const consumed=new Set();
+  for(const [group,last] of byStateGroup){
+    candidateRecords.push({last,records:byFinding.get(last.findingId)||[],stateGroup:group});
+    for(const fid of byFinding.keys()) if(finding(fid)?.stateGroup===group) consumed.add(fid);
+  }
+  for(const [fid,records] of byFinding){ if(!consumed.has(fid)) candidateRecords.push({last:[...records].sort((a,b)=>new Date(a.time)-new Date(b.time)).at(-1),records}); }
+  const out=[];
+  for(const item of candidateRecords){
+    const last=item.last, f=finding(last.findingId); if(!f || f.sourceType==='clinical' || f.monitoringClass==='context_once') continue;
+    const status=last.status||(last.present===false?'checked_absent':'present');
+    if(status==='resolved') continue;
+    const lastMs=new Date(last.time).getTime(); if(!Number.isFinite(lastMs)) continue;
+    const cadence=monitoringCadenceHours(f,last,ep), elapsed=Math.max(0,(ref-lastMs)/36e5), dueAt=new Date(lastMs+cadence*36e5).toISOString(), overdueHours=elapsed-cadence, due=overdueHours>=0;
+    const ig=informationGainForFinding(f.id,baseEvidence,virtualWeight);
+    const overdueFactor=due?Math.min(cfg.maxOverduePriorityFactor||3,1+Math.max(0,overdueHours)/Math.max(1,cadence)):Math.max(.12,elapsed/Math.max(1,cadence));
+    const uncertainty=1+(1-confidenceWeight(last.confidence||'high'))*.8;
+    const recurrence=Math.min(1.35,1+.08*Math.log2(1+item.records.filter(r=>r.present!==false).length));
+    const priority=(.015+ig.gain)*overdueFactor*uncertainty*recurrence;
+    let kind='event_recurrence', prompt=`Has ${f.label.toLowerCase()} occurred again since ${fmtDateTime(last.time)}?`;
+    if(f.stateGroup){kind=status==='checked_absent'?'state_absence_recheck':'state_reassessment';prompt=status==='checked_absent'?`Is ${f.label.toLowerCase()} still not observed?`:`Is ${f.label.toLowerCase()} still the current state?`;}
+    else if(status==='checked_absent'){kind='absence_recheck';prompt=`Is ${f.label.toLowerCase()} still not observed?`;}
+    out.push({kind,finding:f,last,records:item.records,referenceTime:refIso,cadenceHours:cadence,dueAt,elapsedHours:elapsed,overdueHours,due,priority,informationGain:ig.gain,prompt});
+  }
+  return out.sort((a,b)=>(b.due-a.due)||(b.priority-a.priority)||(new Date(a.dueAt)-new Date(b.dueAt))).slice(0,cfg.queueLimit||12);
+}
+function monitoringSummary(ep=activeEpisode()){
+  const obs=episodeObservations(ep?.id), queue=monitoringCandidates(ep), ref=episodeMonitoringReference(ep), bounds=episodeEvidenceBounds(ep);
+  const resolved=obs.filter(o=>o.status==='resolved').length, days=distinctDayCount(obs);
+  return {queue,due:queue.filter(x=>x.due),upcoming:queue.filter(x=>!x.due),referenceTime:ref,rawObservations:obs.length,observationDays:days,resolved,bounds};
+}
+function monitoringDueLabel(item,ep=activeEpisode()){
+  if(item.due){
+    if(ep?.trackingMode==='retrospective') return `Due at historical reference point · cadence ${formatHours(item.cadenceHours)}`;
+    return `${formatHours(Math.max(0,item.overdueHours))} overdue · cadence ${formatHours(item.cadenceHours)}`;
+  }
+  return `Next re-check in ${formatHours(Math.max(0,-item.overdueHours))} · cadence ${formatHours(item.cadenceHours)}`;
+}
+function formatHours(h){ if(h<1)return `${Math.max(1,Math.round(h*60))} min`; if(h<48)return `${h<10?h.toFixed(1):Math.round(h)} h`; return `${(h/24).toFixed(h<240?1:0)} d`; }
 function evidenceImpact(evidence,targetHypothesisId){
   const all=modelEvidence(); const full=infer(all).find(x=>x.id===targetHypothesisId)?.score||0;
   const without=infer(all.filter(x=>x.id!==evidence.id)).find(x=>x.id===targetHypothesisId)?.score||0;
@@ -373,6 +490,7 @@ function setView(view){
     dashboard:['Dashboard','Track observations, episodes, and how the evidence shifts.'],
     log:['Log observation','Add a timestamped finding or explicitly record that a finding was absent.'],
     timeline:['Timeline','Review and edit the episode as it unfolded.'],
+    monitoring:['Monitoring','Reassess ongoing findings, track persistence and recurrence, and identify new information opportunities.'],
     context:['Clinical & context','Record measurements, trends, treatments, diagnostic studies, and diet context.'],
     history:['History','Prior diagnoses, linked episodes, and longitudinal patient context.'],
     model:['Bayesian model','Inspect relative pattern-consistency scores and the evidence behind them.'],
@@ -389,6 +507,7 @@ function render(){
   if(currentView==='dashboard') root.innerHTML=renderDashboard();
   if(currentView==='log'){ root.innerHTML=renderLogPage(); bindLogForm($('#inlineLogForm')); }
   if(currentView==='timeline') root.innerHTML=renderTimelinePage();
+  if(currentView==='monitoring') root.innerHTML=renderMonitoringPage();
   if(currentView==='context') root.innerHTML=renderContextPage();
   if(currentView==='history') root.innerHTML=renderHistoryPage();
   if(currentView==='model') root.innerHTML=renderModelPage();
@@ -397,16 +516,53 @@ function render(){
   bindRenderedActions();
 }
 
+function monitoringActionButtons(item){
+  const fid=escapeHtml(item.finding.id), cls=item.finding.monitoringClass||'';
+  if(item.kind==='state_reassessment'){
+    if(cls==='baseline_state') return `<div class="question-actions"><button class="primary" data-monitor-status="present" data-finding="${fid}">Still current</button><button class="ghost" data-log-finding="${fid}">Changed / details</button></div>`;
+    return `<div class="question-actions"><button class="primary" data-monitor-status="present" data-finding="${fid}">Still present</button><button class="ghost" data-monitor-status="resolved" data-finding="${fid}">Resolved</button><button class="ghost" data-log-finding="${fid}">Add details</button></div>`;
+  }
+  if(item.kind==='state_absence_recheck'||item.kind==='absence_recheck') return `<div class="question-actions"><button class="primary" data-monitor-status="checked_absent" data-finding="${fid}">Still not observed</button><button class="ghost" data-monitor-status="present" data-finding="${fid}">Observed now</button><button class="ghost" data-log-finding="${fid}">Add details</button></div>`;
+  return `<div class="question-actions"><button class="primary" data-monitor-status="present" data-finding="${fid}">Occurred again</button><button class="ghost" data-monitor-status="checked_absent" data-finding="${fid}">No recurrence observed</button><button class="ghost" data-log-finding="${fid}">Add details</button></div>`;
+}
+function renderMonitoringQueue(items,{compact=false}={}){
+  if(!items.length) return `<div class="empty compact">No reassessments are currently queued.</div>`;
+  return `<div class="monitor-list">${items.map(item=>`<div class="monitor-item ${item.due?'due':''}"><div class="monitor-main"><div class="monitor-title"><span class="badge ${item.due?'urgent':'clear'}">${item.due?'Due':'Upcoming'}</span><strong>${escapeHtml(item.finding.label)}</strong></div><p>${escapeHtml(item.prompt)}</p><div class="monitor-meta"><span>Last record ${fmtDateTime(item.last.time)}</span><span>${escapeHtml(monitoringDueLabel(item))}</span><span>Discriminatory value ${item.informationGain.toFixed(3)} bits</span></div>${compact?'':`<small>${escapeHtml((knowledge.monitoringConfig?.policy)||'')}</small>`}</div><div class="monitor-actions">${monitoringActionButtons(item)}</div></div>`).join('')}</div>`;
+}
+function renderNewObservationOpportunity(q,{compact=false}={}){
+  if(!q) return `<div class="empty compact">No additional unrecorded owner finding is currently available.</div>`;
+  return `<div class="question-card"><h3>${escapeHtml(q.finding.question)}</h3><p>${compact?'Highest-value unrecorded finding at the current model state.':'This is an unrecorded finding estimated to reduce model uncertainty. It is separate from reassessing symptoms you are already following and is not a medical recommendation.'}</p><div class="chips"><span class="chip accent">Expected information gain ${q.gain.toFixed(3)} bits</span></div><div class="question-actions section-gap"><button class="primary" data-quick-answer="yes" data-finding="${q.finding.id}">Yes</button><button class="ghost" data-quick-answer="no" data-finding="${q.finding.id}">No</button><button class="ghost" data-log-finding="${q.finding.id}">Add details</button></div></div>`;
+}
+function renderMonitoringPage(){
+  const ep=activeEpisode(), summary=monitoringSummary(ep), due=summary.due, upcoming=summary.upcoming, opportunities=newObservationCandidates();
+  const currentEvidence=deriveOwnerEvidence().filter(e=>e.sourceScope==='current').sort((a,b)=>new Date(b.time)-new Date(a.time));
+  const refLabel=ep.trackingMode==='retrospective'?'historical reference point':'current time';
+  return `<div class="notice"><strong>Monitoring is separate from inference.</strong> The queue helps you decide what recorded state may be worth updating next. Its cadence is a data-quality heuristic, not a veterinary recheck schedule. Repeated checks remain raw history and are temporally summarized rather than multiplied as independent diagnostic tests.</div>
+  ${ep.trackingMode==='retrospective'?`<div class="notice warning section-gap"><strong>Retrospective reconstruction mode.</strong> Reassessment timing is referenced to the latest evidence in this episode (${fmtDateTime(summary.referenceTime)}), not to today's clock. Quick answers open the detailed form. With <strong>Latest episode entry</strong> selected, the form is prefilled from the most recent historical record instead of today's date.</div>`:''}
+  <div class="grid three section-gap">
+    <div class="card kpi"><div class="kpi-label">REASSESSMENTS DUE</div><div class="kpi-value">${due.length}</div><div class="kpi-foot">${summary.queue.length} tracked finding${summary.queue.length===1?'':'s'} in queue</div></div>
+    <div class="card kpi"><div class="kpi-label">OBSERVATION DAYS</div><div class="kpi-value">${summary.observationDays}</div><div class="kpi-foot">${summary.rawObservations} raw observation${summary.rawObservations===1?'':'s'}</div></div>
+    <div class="card kpi"><div class="kpi-label">MONITORING REFERENCE</div><div class="kpi-value" style="font-size:21px">${ep.trackingMode==='retrospective'?'Historical':'Live'}</div><div class="kpi-foot">${fmtDateTime(summary.referenceTime)} · ${escapeHtml(ep.monitoringCadence||'standard')} cadence</div></div>
+  </div>
+  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">REASSESSMENT QUEUE</span><h2>Ongoing and recurrent findings</h2></div><span class="chip ${due.length?'warning-chip':''}">${due.length} due</span></div><div class="card-pad">${renderMonitoringQueue([...due,...upcoming])}</div></div>
+  <div class="grid two section-gap">
+    <div class="card"><div class="card-head"><div><span class="eyebrow">NEW INFORMATION</span><h2>Unrecorded findings worth checking</h2></div><span class="chip">${opportunities.length} shown</span></div><div class="card-pad"><p>These prompts are distinct from reassessing an ongoing symptom. They are ranked only by expected reduction in model uncertainty.</p><div class="opportunity-list">${opportunities.map(q=>renderNewObservationOpportunity(q,{compact:true})).join('')}</div></div></div>
+    <div class="card"><div class="card-head"><div><span class="eyebrow">DERIVED CURRENT STATE</span><h2>What the model is carrying forward</h2></div></div><div class="card-pad">${currentEvidence.length?`<div class="context-list">${currentEvidence.slice(0,20).map(e=>`<div class="context-item"><div><strong>${escapeHtml(evidenceLabel(e))}</strong><small>${escapeHtml(e.summary||'')}</small></div><div class="context-actions"><span class="chip">${e.rawCount||1} raw</span><span class="chip">${effectiveEvidenceWeight(e).toFixed(2)}× evidence</span></div></div>`).join('')}</div>`:'<div class="empty compact">No derived owner evidence yet.</div>'}</div></div>
+  </div>
+  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">EPISODE MONITORING MODE</span><h2>${escapeHtml(ep.title)}</h2></div><button class="secondary" data-edit-episode>Edit episode</button></div><div class="card-pad"><p><strong>${ep.trackingMode==='retrospective'?'Retrospective reconstruction':'Live monitoring'}</strong> · ${escapeHtml(ep.monitoringCadence||'standard')} logging cadence · reference is ${escapeHtml(refLabel)}.</p><p><strong>New-entry date default:</strong> ${escapeHtml(entryDateModeLabel(ep))}${ep.entryDateMode==='latest_evidence'?` (${fmtDateTime(episodeLatestEvidenceTime(ep))})`:''}.</p><p class="helper">Use episode settings to switch tracking mode, change reassessment density, or control the timestamp prefilled for new entries. These controls do not change Bayesian likelihoods.</p></div></div>`;
+}
+
 function renderDashboard(){
-  const obs=episodeObservations(); const clinical=episodeClinicalMeasurements(); const evidence=modelEvidence(); const model=infer(evidence); const alerts=urgencyAlerts(); const ep=activeEpisode(); const next=nextBestQuestion(); const timeline=episodeTimelineItems();
-  const today=new Date().toDateString(); const todayCount=obs.filter(o=>new Date(o.time).toDateString()===today).length;
-  const duration=ep ? hoursBetween(ep.start,ep.end||new Date().toISOString()) : 0;
+  const obs=episodeObservations(); const clinical=episodeClinicalMeasurements(); const evidence=modelEvidence(); const model=infer(evidence); const alerts=urgencyAlerts(); const ep=activeEpisode(); const next=nextBestQuestion(); const timeline=episodeTimelineItems(); const monitoring=monitoringSummary(ep); const due=monitoring.due;
+  const refDate=new Date(monitoring.referenceTime).toDateString(); const referenceDayCount=obs.filter(o=>new Date(o.time).toDateString()===refDate).length;
+  const analysisStart=episodeAnalysisStart(ep), duration=ep&&analysisStart?hoursBetween(analysisStart,monitoring.referenceTime):0;
+  const topDue=due[0];
   return `
     ${alerts.length?renderUrgency(alerts):`<div class="notice"><strong>No active deterministic urgency flags.</strong> This does not rule out illness or replace veterinary judgment.</div>`}
     <div class="grid three section-gap">
-      <div class="card kpi"><div class="kpi-label">OBSERVATIONS TODAY</div><div class="kpi-value">${todayCount}</div><div class="kpi-foot">${obs.length} in this episode</div></div>
-      <div class="card kpi"><div class="kpi-label">EPISODE DURATION</div><div class="kpi-value">${duration<24?duration.toFixed(1)+' h':(duration/24).toFixed(1)+' d'}</div><div class="kpi-foot">Started ${fmtDateTime(ep.start)}</div></div>
-      <div class="card kpi"><div class="kpi-label">URGENCY RULES</div><div class="kpi-value" style="font-size:22px">${escapeHtml(urgencyStatus())}</div><div class="kpi-foot">Independent of Bayesian model</div></div>
+      <div class="card kpi"><div class="kpi-label">${ep.trackingMode==='retrospective'?'OBSERVATIONS ON LATEST DAY':'OBSERVATIONS TODAY'}</div><div class="kpi-value">${referenceDayCount}</div><div class="kpi-foot">${obs.length} raw observation${obs.length===1?'':'s'} in this episode</div></div>
+      <div class="card kpi"><div class="kpi-label">EPISODE DURATION</div><div class="kpi-value">${duration<24?duration.toFixed(1)+' h':(duration/24).toFixed(1)+' d'}</div><div class="kpi-foot">Analysis start ${analysisStart?fmtDateTime(analysisStart):'—'} · ${ep.trackingMode==='retrospective'?'historical':'live'}</div></div>
+      <div class="card kpi"><div class="kpi-label">REASSESSMENTS DUE</div><div class="kpi-value">${due.length}</div><div class="kpi-foot">Monitoring queue · independent of Bayesian likelihoods</div></div>
     </div>
     <div class="grid two section-gap">
       <div class="card">
@@ -414,8 +570,8 @@ function renderDashboard(){
         <div class="score-list">${evidence.length?renderScores(model.slice(0,8)):`<div class="empty">No condition ranking yet. Add observations or mapped clinical evidence to begin.</div>`}</div>
       </div>
       <div class="card">
-        <div class="card-head"><div><span class="eyebrow">INFORMATION VALUE</span><h2>Useful next observation</h2></div></div>
-        ${next?`<div class="question-card"><h3>${escapeHtml(next.finding.question)}</h3><p>Of the unrecorded findings, this question is estimated to reduce the model's uncertainty the most right now. It is not a medical recommendation.</p><div class="chips"><span class="chip accent">Expected information gain ${next.gain.toFixed(3)} bits</span></div><div class="question-actions section-gap"><button class="primary" data-quick-answer="yes" data-finding="${next.finding.id}">Yes</button><button class="ghost" data-quick-answer="no" data-finding="${next.finding.id}">No</button><button class="ghost" data-log-finding="${next.finding.id}">Add details</button></div></div>`:`<div class="empty">Add observations to generate a next-best question.</div>`}
+        <div class="card-head"><div><span class="eyebrow">MONITORING & INFORMATION VALUE</span><h2>${topDue?'Reassess ongoing evidence':'Useful next observation'}</h2></div><button class="mini" data-viewgo="monitoring">Open monitoring</button></div>
+        ${topDue?`<div class="card-pad">${renderMonitoringQueue([topDue],{compact:true})}${next?`<div class="divider"></div><span class="eyebrow">NEW INFORMATION</span>${renderNewObservationOpportunity(next,{compact:true})}`:''}</div>`:`<div class="card-pad">${renderNewObservationOpportunity(next)}</div>`}
       </div>
     </div>
     <div class="grid two section-gap">
@@ -424,6 +580,7 @@ function renderDashboard(){
     </div>
     <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">CONTEXT</span><h2>Clinical & longitudinal context</h2></div><button class="mini" data-viewgo="context">Open context</button></div><div class="card-pad context-summary"><div><strong>${clinical.length}</strong><span>clinical result${clinical.length===1?'':'s'} attached</span></div><div><strong>${episodeTreatments().length}</strong><span>treatment record${episodeTreatments().length===1?'':'s'} attached</span></div><div><strong>${episodeStudies().length}</strong><span>diagnostic stud${episodeStudies().length===1?'y':'ies'} attached</span></div><p>Measurements and selected derived trends can inform the model. Treatments, studies, and diet remain explicit context unless a future evidence mapping is justified.</p></div></div>`;
 }
+
 function renderUrgency(alerts){
   const current=alerts.filter(a=>!urgencyIsHistorical(a)), top=(current.length?current:alerts)[0], historical=urgencyIsHistorical(top), cls=top.level==='emergency'?'danger':'warning';
   const label=historical?(top.level==='emergency'?'Historical emergency flag':'Historical urgent flag'):(top.level==='emergency'?'Emergency flag':'Urgent flag');
@@ -466,7 +623,7 @@ function logFormHtml(obs=null,formId='observationForm'){
       <div class="field"><label>Outcome</label><select name="status"><option value="present" ${(obs?.status|| (obs?.present===false?'checked_absent':'present'))==='present'?'selected':''}>Observed / present</option><option value="checked_absent" ${(obs?.status|| (obs?.present===false?'checked_absent':'present'))==='checked_absent'?'selected':''}>Checked and not observed</option><option value="resolved" ${obs?.status==='resolved'?'selected':''}>Previously present — now resolved</option></select></div>
     </div>
     <div class="form-row three">
-      <div class="field"><label>Date & time</label><input type="datetime-local" name="time" value="${obs?toInputDate(obs.time):nowLocalInput()}" required></div>
+      <div class="field"><label>Date & time</label><input type="datetime-local" name="time" value="${toInputDate(obs?.time||episodeEntryDefaultTime())}" required>${dateEntryHelperHtml('time')}</div>
       <div class="field"><label>Intensity</label><select name="severity"><option value="low" ${obs?.severity==='low'?'selected':''}>Low / mild</option><option value="medium" ${!obs||obs?.severity==='medium'?'selected':''}>Medium</option><option value="high" ${obs?.severity==='high'?'selected':''}>High / marked</option></select></div>
       <div class="field"><label>Observation confidence</label><select name="confidence"><option value="low" ${obs?.confidence==='low'?'selected':''}>Low — uncertain</option><option value="medium" ${obs?.confidence==='medium'?'selected':''}>Medium — fairly sure</option><option value="high" ${!obs||!obs?.confidence||obs?.confidence==='high'?'selected':''}>High — directly observed / measured</option></select></div>
     </div>
@@ -539,7 +696,7 @@ function diagnosisStatusLabel(status){
 function diagnosisLabel(d){ return hypothesis(d.conditionId)?.label || d.customLabel || 'Custom diagnosis'; }
 function episodeEvidenceBounds(ep=activeEpisode()){
   if(!ep) return null;
-  const times=[...episodeObservations(ep.id).map(o=>o.time),...episodeClinicalMeasurements(ep.id).map(m=>m.time),...episodeStudies(ep.id).map(x=>x.time)].map(x=>new Date(x).getTime()).filter(Number.isFinite);
+  const times=[...episodeObservations(ep.id).map(o=>o.time),...episodeClinicalMeasurements(ep.id).map(m=>m.time),...episodeStudies(ep.id).map(x=>x.time),...episodeTreatments(ep.id).flatMap(t=>[t.start,t.end].filter(Boolean))].map(x=>new Date(x).getTime()).filter(Number.isFinite);
   if(!times.length) return null;
   return {first:new Date(Math.min(...times)).toISOString(),last:new Date(Math.max(...times)).toISOString()};
 }
@@ -549,7 +706,7 @@ function renderHistoryPage(){
   return `<div class="notice"><strong>History is explicit, not automatic.</strong> Episodes remain analytically separate unless you link them. Confirmed or suspected diagnoses can be retained as patient history and optionally used as prior context. Linked episode evidence is down-weighted and shown separately in the model audit.</div>
   <div class="grid two section-gap history-grid">
     <div class="card"><div class="card-head"><div><span class="eyebrow">PRIOR DIAGNOSES</span><h2>${escapeHtml(pet.name)}'s diagnosis history</h2></div><button class="primary" data-add-diagnosis>＋ Add diagnosis</button></div><div class="card-pad">${dx.length?`<div class="context-list">${dx.map(d=>`<div class="context-item"><div><strong>${escapeHtml(diagnosisLabel(d))}</strong><small>${escapeHtml(diagnosisStatusLabel(d.status))}${d.date?' · '+escapeHtml(d.date):''}${d.source?' · '+escapeHtml(d.source):''}${d.stage?' · '+escapeHtml(d.stage):''}</small>${d.notes?`<p>${escapeHtml(d.notes)}</p>`:''}</div><div class="context-actions">${d.useInModel&&d.conditionId?'<span class="chip accent">Prior context</span>':'<span class="chip">Record only</span>'}<button class="mini" data-edit-diagnosis="${d.id}">Edit</button></div></div>`).join('')}</div>`:'<div class="empty compact">No prior diagnoses saved for this pet.</div>'}</div></div>
-    <div class="card"><div class="card-head"><div><span class="eyebrow">CURRENT EPISODE</span><h2>Episode definition</h2></div><button class="secondary" data-edit-episode>Edit episode</button></div><div class="card-pad"><p><strong>${escapeHtml(ep.title)}</strong></p><div class="history-facts"><div><span>Episode start</span><strong>${fmtDateTime(ep.start)}</strong></div><div><span>Status</span><strong>${escapeHtml(ep.status)}</strong></div><div><span>Age at analysis start</span><strong>${age==null?'—':age.toFixed(1)+' y'}</strong></div><div><span>Linked prior episodes</span><strong>${linked.size}</strong></div></div>${bounds?`<div class="notice ${new Date(ep.start)>new Date(bounds.first)?'warning':''} section-gap"><strong>Evidence range:</strong> ${fmtDateTime(bounds.first)} → ${fmtDateTime(bounds.last)}.${new Date(ep.start)>new Date(bounds.first)?' The episode starts after its earliest evidence.':''}</div><div class="button-row"><button class="ghost" data-align-episode>Align episode start to earliest evidence</button></div>`:''}</div></div>
+    <div class="card"><div class="card-head"><div><span class="eyebrow">CURRENT EPISODE</span><h2>Episode definition</h2></div><button class="secondary" data-edit-episode>Edit episode</button></div><div class="card-pad"><p><strong>${escapeHtml(ep.title)}</strong></p><div class="history-facts"><div><span>Episode start</span><strong>${fmtDateTime(ep.start)}</strong></div><div><span>Status</span><strong>${escapeHtml(ep.status)}</strong></div><div><span>Tracking mode</span><strong>${ep.trackingMode==='retrospective'?'Retrospective':'Live'}</strong></div><div><span>Monitoring cadence</span><strong>${escapeHtml(ep.monitoringCadence||'standard')}</strong></div><div><span>New-entry dates</span><strong>${escapeHtml(entryDateModeLabel(ep))}</strong></div><div><span>Age at analysis start</span><strong>${age==null?'—':age.toFixed(1)+' y'}</strong></div><div><span>Linked prior episodes</span><strong>${linked.size}</strong></div></div>${bounds?`<div class="notice ${new Date(ep.start)>new Date(bounds.first)?'warning':''} section-gap"><strong>Evidence range:</strong> ${fmtDateTime(bounds.first)} → ${fmtDateTime(bounds.last)}.${new Date(ep.start)>new Date(bounds.first)?' The episode starts after its earliest evidence.':''}</div><div class="button-row"><button class="ghost" data-align-episode>Align episode start to earliest evidence</button></div>`:''}</div></div>
   </div>
   <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">LINKED HISTORY</span><h2>Select prior episodes for this analysis</h2></div><span class="chip">${linked.size} linked</span></div><div class="card-pad"><p>Linked episodes remain separate records. Their derived evidence enters the current model at a reduced historical weight; raw rows are never merged into this episode.</p>${prior.length?`<div class="link-episode-list">${prior.map(e=>`<label class="link-episode-row"><input type="checkbox" data-link-episode="${e.id}" ${linked.has(e.id)?'checked':''}><span><strong>${escapeHtml(e.title)}</strong><small>${fmtDate(e.start)}${e.end?' → '+fmtDate(e.end):' · open'} · ${episodeObservations(e.id).length} observations · ${episodeClinicalMeasurements(e.id).length} clinical results</small></span></label>`).join('')}</div>`:'<div class="empty compact">No other episodes are available to link.</div>'}</div></div>
   <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">LONGITUDINAL RECORD</span><h2>Patient data inventory</h2></div></div><div class="card-pad context-summary"><div><strong>${petEpisodes().length}</strong><span>episodes</span></div><div><strong>${state.observations.filter(o=>petEpisodes().some(e=>e.id===o.episodeId)).length}</strong><span>raw observations</span></div><div><strong>${petClinicalMeasurements().length}</strong><span>clinical results</span></div><div><strong>${petDiets().length}</strong><span>diet records</span></div><div><strong>${petTreatments().length}</strong><span>treatments</span></div><div><strong>${petStudies().length}</strong><span>diagnostic studies</span></div><div><strong>${dx.length}</strong><span>diagnoses</span></div></div></div>`;
@@ -566,20 +723,21 @@ function renderModelPage(){
   ${evidence.length?`<div class="card section-gap"><div class="card-head"><div><span class="eyebrow">TOP CURRENT MATCH</span><h2>${escapeHtml(top.label)}</h2><small>${escapeHtml(top.family||'')}</small></div><span class="chip accent">${(top.score*100).toFixed(1)}%</span></div><div class="card-pad"><p>${escapeHtml(top.description)}</p>${priorNotes.length?`<div class="notice"><strong>Prior/context adjustments for this condition:</strong> ${escapeHtml(priorNotes.join(' · '))}</div>`:''}<div class="divider"></div><h3>Derived evidence contribution</h3><p class="helper">Raw observations are retained in the timeline. Repeated observations are summarized into persistence/recurrence evidence before inference, avoiding naïve duplicate multiplication.</p></div><div class="evidence-list">${evidence.map(e=>{const imp=evidenceImpact(e,top.id);return `<div class="evidence-item"><div><strong>${escapeHtml(evidenceLabel(e))}</strong><small>${fmtDateTime(e.time)} · ${e.evidenceType.replaceAll('_',' ')} · effective weight ${effectiveEvidenceWeight(e).toFixed(2)}×${e.evidenceGroup&&e.dependencyFactor<1?` · correlated ${escapeHtml(e.evidenceGroup)} ×${e.dependencyFactor.toFixed(2)}`:''}${e.summary?' · '+escapeHtml(e.summary):''}</small></div><div class="impact ${imp>=0?'up':'down'}">${imp>=0?'▲':'▼'} ${Math.abs(imp*100).toFixed(1)} pt</div></div>`}).join('')}</div></div>`:`<div class="notice section-gap"><strong>No observations yet.</strong> The condition scores below are only baseline model weights until evidence is logged.</div>`}
   <div class="grid two section-gap"><div class="card"><div class="card-head"><div><span class="eyebrow">CURRENT EPISODE EVIDENCE</span><h2>${currentEvidence.length} derived evidence item${currentEvidence.length===1?'':'s'}</h2></div></div><div class="card-pad"><p>${episodeObservations().length} raw owner observations and ${episodeClinicalMeasurements().length} clinical result${episodeClinicalMeasurements().length===1?'':'s'} are summarized for ${escapeHtml(ep.title)}.</p></div></div><div class="card"><div class="card-head"><div><span class="eyebrow">LINKED HISTORY</span><h2>${historicalEvidence.length} historical evidence item${historicalEvidence.length===1?'':'s'}</h2></div></div><div class="card-pad"><p>${linkedEpisodes().length} prior episode${linkedEpisodes().length===1?' is':'s are'} explicitly linked. Historical evidence is down-weighted rather than merged with the current episode.</p><button class="ghost" data-viewgo="history">Manage linked history</button></div></div></div>
   <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">CONDITION LIBRARY</span><h2>Browse all ${knowledge.hypotheses.length} hypotheses</h2></div><span class="chip">${knowledge.coverage?.namedConditionCount||knowledge.hypotheses.length} named</span></div><div class="card-pad"><p>${escapeHtml(knowledge.coverage?.scope||'')}</p>${familySections}</div></div>
-  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">TRANSPARENCY</span><h2>Inference architecture</h2></div></div><div class="card-pad"><p><strong>Raw records → temporal/quantitative summaries → correlation-aware evidence → clinical/history context → Bayesian pattern scores.</strong> Repeated observations contribute persistence or recurrence information rather than being treated as independent duplicate tests.</p><p>Evidence known to share physiology can be assigned to a correlation group. The strongest item keeps full weight while additional correlated items are progressively discounted; all source records remain visible.</p><p>Numeric clinical results retain their actual value. When a lab reference interval or a source-backed measurement anchor is available, the degree of abnormality modestly changes evidence strength. A single result is never silently converted into a diagnosis.</p><p>Known diagnoses and demographics adjust priors transparently. Previous episodes affect the current analysis only when explicitly linked.</p><p>${escapeHtml(knowledge.coverage?.priorPolicy||'')}</p><p>The explicit <strong>Other / unmodeled condition</strong> hypothesis reserves model mass for conditions outside this library.</p><button class="ghost" data-viewgo="settings">View coverage & provenance</button></div></div>`;
+  <div class="card section-gap"><div class="card-head"><div><span class="eyebrow">TRANSPARENCY</span><h2>Inference architecture</h2></div></div><div class="card-pad"><p><strong>Raw records → temporal/quantitative summaries → correlation-aware evidence → clinical/history context → Bayesian pattern scores.</strong> Repeated observations contribute persistence or recurrence information rather than being treated as independent duplicate tests.</p><p>A separate longitudinal monitoring engine decides what may be worth reassessing and when. Monitoring cadence never changes hypothesis likelihoods; it only prioritizes data collection and preserves the distinction between new information and follow-up of an existing finding.</p><p>Evidence known to share physiology can be assigned to a correlation group. The strongest item keeps full weight while additional correlated items are progressively discounted; all source records remain visible.</p><p>Numeric clinical results retain their actual value. When a lab reference interval or a source-backed measurement anchor is available, the degree of abnormality modestly changes evidence strength. A single result is never silently converted into a diagnosis.</p><p>Known diagnoses and demographics adjust priors transparently. Previous episodes affect the current analysis only when explicitly linked.</p><p>${escapeHtml(knowledge.coverage?.priorPolicy||'')}</p><p>The explicit <strong>Other / unmodeled condition</strong> hypothesis reserves model mass for conditions outside this library.</p><button class="ghost" data-viewgo="settings">View coverage & provenance</button></div></div>`;
 }
 function renderReportsPage(){
   const opts=state.settings;
-  return `<div class="card no-print"><div class="card-head"><div><span class="eyebrow">REPORT OPTIONS</span><h2>Vet-friendly episode report</h2></div></div><div class="card-pad"><div class="report-options"><label class="checkbox"><input type="checkbox" data-report-opt="reportModel" ${opts.reportModel?'checked':''}> Include Bayesian model</label><label class="checkbox"><input type="checkbox" data-report-opt="reportUrgency" ${opts.reportUrgency?'checked':''}> Include urgency-rule history</label><label class="checkbox"><input type="checkbox" data-report-opt="reportNotes" ${opts.reportNotes?'checked':''}> Include observation notes</label><label class="checkbox"><input type="checkbox" data-report-opt="reportClinical" ${opts.reportClinical?'checked':''}> Include clinical measurements</label><label class="checkbox"><input type="checkbox" data-report-opt="reportDiet" ${opts.reportDiet?'checked':''}> Include diet context</label><label class="checkbox"><input type="checkbox" data-report-opt="reportHistory" ${opts.reportHistory?'checked':''}> Include diagnoses & linked history</label><label class="checkbox"><input type="checkbox" data-report-opt="reportTreatments" ${opts.reportTreatments?'checked':''}> Include treatments</label><label class="checkbox"><input type="checkbox" data-report-opt="reportStudies" ${opts.reportStudies?'checked':''}> Include diagnostic studies</label></div><div class="report-actions"><button class="primary" data-print>Print / Save PDF</button></div></div></div><div class="section-gap print-target">${reportHtml()}</div>`;
+  return `<div class="card no-print"><div class="card-head"><div><span class="eyebrow">REPORT OPTIONS</span><h2>Vet-friendly episode report</h2></div></div><div class="card-pad"><div class="report-options"><label class="checkbox"><input type="checkbox" data-report-opt="reportModel" ${opts.reportModel?'checked':''}> Include Bayesian model</label><label class="checkbox"><input type="checkbox" data-report-opt="reportUrgency" ${opts.reportUrgency?'checked':''}> Include urgency-rule history</label><label class="checkbox"><input type="checkbox" data-report-opt="reportNotes" ${opts.reportNotes?'checked':''}> Include observation notes</label><label class="checkbox"><input type="checkbox" data-report-opt="reportClinical" ${opts.reportClinical?'checked':''}> Include clinical measurements</label><label class="checkbox"><input type="checkbox" data-report-opt="reportDiet" ${opts.reportDiet?'checked':''}> Include diet context</label><label class="checkbox"><input type="checkbox" data-report-opt="reportHistory" ${opts.reportHistory?'checked':''}> Include diagnoses & linked history</label><label class="checkbox"><input type="checkbox" data-report-opt="reportTreatments" ${opts.reportTreatments?'checked':''}> Include treatments</label><label class="checkbox"><input type="checkbox" data-report-opt="reportStudies" ${opts.reportStudies?'checked':''}> Include diagnostic studies</label><label class="checkbox"><input type="checkbox" data-report-opt="reportMonitoring" ${opts.reportMonitoring?'checked':''}> Include derived monitoring summary</label></div><div class="report-actions"><button class="primary" data-print>Print / Save PDF</button></div></div></div><div class="section-gap print-target">${reportHtml()}</div>`;
 }
 function reportHtml(){
-  const ep=activeEpisode(),pet=activePet(),obs=episodeObservations(),clinical=episodeClinicalMeasurements(),diets=episodeDiets(),treatments=episodeTreatments(),studies=episodeStudies(),model=infer(),alerts=urgencyAlerts(),dx=petDiagnoses(),linked=linkedEpisodes();
-  return `<article class="report-paper"><h2>Bayesian Symptom Tracker — Episode Report</h2><p class="report-muted">Generated ${fmtDateTime(new Date().toISOString())} · App v${APP_VERSION} · Knowledge pack ${escapeHtml(knowledge.packId)}</p><table><tr><th>Patient</th><td>${escapeHtml(pet.name)}</td><th>Species</th><td>Cat</td></tr><tr><th>Sex</th><td>${escapeHtml(pet.sex)}</td><th>Weight</th><td>${escapeHtml(pet.weight||'—')}</td></tr><tr><th>Episode</th><td>${escapeHtml(ep.title)}</td><th>Started</th><td>${fmtDateTime(ep.start)}</td></tr></table>
+  const ep=activeEpisode(),pet=activePet(),obs=episodeObservations(),clinical=episodeClinicalMeasurements(),diets=episodeDiets(),treatments=episodeTreatments(),studies=episodeStudies(),model=infer(),alerts=urgencyAlerts(),dx=petDiagnoses(),linked=linkedEpisodes(),monitoring=monitoringSummary(ep),derivedOwner=deriveOwnerEvidence();
+  return `<article class="report-paper"><h2>Bayesian Symptom Tracker — Episode Report</h2><p class="report-muted">Generated ${fmtDateTime(new Date().toISOString())} · App v${APP_VERSION} · Knowledge pack ${escapeHtml(knowledge.packId)}</p><table><tr><th>Patient</th><td>${escapeHtml(pet.name)}</td><th>Species</th><td>Cat</td></tr><tr><th>Sex</th><td>${escapeHtml(pet.sex)}</td><th>Weight</th><td>${escapeHtml(pet.weight||'—')}</td></tr><tr><th>Episode</th><td>${escapeHtml(ep.title)}</td><th>Started</th><td>${fmtDateTime(ep.start)}</td></tr><tr><th>Tracking mode</th><td>${ep.trackingMode==='retrospective'?'Retrospective reconstruction':'Live monitoring'}</td><th>Monitoring cadence</th><td>${escapeHtml(ep.monitoringCadence||'standard')}</td></tr></table>
   <h3>Observation timeline</h3><table><thead><tr><th>Time</th><th>Finding</th><th>Intensity</th><th>Confidence</th>${state.settings.reportNotes?'<th>Notes</th>':''}</tr></thead><tbody>${obs.map(o=>`<tr><td>${fmtDateTime(o.time)}</td><td>${(o.status==='resolved'?'Resolved: ':o.present===false?'Not observed: ':'')}${escapeHtml(finding(o.findingId)?.label||o.findingId)}</td><td>${escapeHtml(o.severity||'medium')}</td><td>${escapeHtml(o.confidence||'high')}</td>${state.settings.reportNotes?`<td>${escapeHtml(o.notes||'')}</td>`:''}</tr>`).join('')||'<tr><td colspan="5">No observations</td></tr>'}</tbody></table>
+  ${state.settings.reportMonitoring?`<h3>Derived longitudinal monitoring summary</h3><p class="report-muted">Tracking mode: ${ep.trackingMode==='retrospective'?'retrospective reconstruction':'live monitoring'} · monitoring reference ${fmtDateTime(monitoring.referenceTime)}. Reassessment cadence is a data-quality heuristic, not a veterinary follow-up interval.</p><table><thead><tr><th>Finding</th><th>Derived summary</th><th>Last evidence</th><th>Reassessment</th></tr></thead><tbody>${derivedOwner.map(e=>{const q=monitoring.queue.find(x=>x.finding.id===e.findingId);return `<tr><td>${escapeHtml(evidenceLabel(e))}</td><td>${escapeHtml(e.summary||'')}</td><td>${fmtDateTime(e.time)}</td><td>${q?(q.due?'due':'upcoming'):'not queued'}</td></tr>`}).join('')||'<tr><td colspan="4">No derived owner evidence</td></tr>'}</tbody></table>`:''}
   ${state.settings.reportClinical?`<h3>Clinical measurements / test results</h3><table><thead><tr><th>Time</th><th>Test</th><th>Result</th><th>Reference</th><th>Interpretation</th><th>Model</th></tr></thead><tbody>${clinical.map(m=>{const t=measurementTemplate(m.templateId);return `<tr><td>${fmtDateTime(m.time)}</td><td>${escapeHtml(t?.label||m.label||m.templateId)}</td><td>${escapeHtml(m.value||'—')} ${escapeHtml(m.unit||'')}</td><td>${escapeHtml(m.refLow||'—')}–${escapeHtml(m.refHigh||'—')} ${escapeHtml(m.unit||'')}</td><td>${escapeHtml(m.interpretation||'unspecified')}</td><td>${clinicalFindingFor(m)&&m.useInModel?'mapped evidence':'context only'}</td></tr>`}).join('')||'<tr><td colspan="6">No clinical measurements attached to this episode</td></tr>'}</tbody></table>`:''}
   ${state.settings.reportDiet?`<h3>Diet context overlapping episode</h3><table><thead><tr><th>Food</th><th>Form</th><th>Dates</th><th>Protein</th><th>Fiber</th><th>Carbohydrate</th><th>Phosphorus</th></tr></thead><tbody>${diets.map(d=>`<tr><td>${escapeHtml([d.brand,d.product].filter(Boolean).join(' · ')||'Food record')}</td><td>${escapeHtml(d.form||'')}</td><td>${escapeHtml(d.startDate||'—')} → ${escapeHtml(d.endDate||'current')}</td><td>${escapeHtml(nutrientDisplay(d,'protein'))}</td><td>${escapeHtml(nutrientDisplay(d,'fiber'))}</td><td>${escapeHtml(nutrientDisplay(d,'carbs'))}</td><td>${escapeHtml(phosphorusDisplay(d))}</td></tr>`).join('')||'<tr><td colspan="7">No diet context overlaps this episode</td></tr>'}</tbody></table><p class="report-muted">Diet composition is reported as context and does not alter Bayesian scores in this release.</p>`:''}
-  ${state.settings.reportTreatments?`<h3>Medications & treatments</h3><table><thead><tr><th>Treatment</th><th>Type</th><th>Dates</th><th>Dose / route / frequency</th><th>Response</th></tr></thead><tbody>${treatments.map(t=>`<tr><td>${escapeHtml(t.name||'Treatment')}</td><td>${escapeHtml(t.type||'')}</td><td>${t.start?fmtDateTime(t.start):'—'}${t.end?' → '+fmtDateTime(t.end):' → ongoing'}</td><td>${escapeHtml([t.dose,t.route,t.frequency].filter(Boolean).join(' · '))}</td><td>${escapeHtml((t.response||'unknown').replace('_',' '))}</td></tr>`).join('')||'<tr><td colspan="5">No treatments attached to this episode</td></tr>'}</tbody></table><p class="report-muted">Treatment records are context only in v0.6 and do not automatically change condition scores.</p>`:''}
-  ${state.settings.reportStudies?`<h3>Diagnostic studies</h3><table><thead><tr><th>Time</th><th>Study</th><th>Interpretation</th><th>Summary</th></tr></thead><tbody>${studies.map(x=>`<tr><td>${x.time?fmtDateTime(x.time):'—'}</td><td>${escapeHtml(x.type||'Study')}${x.bodySite?' · '+escapeHtml(x.bodySite):''}</td><td>${escapeHtml(x.interpretation||'unspecified')}</td><td>${escapeHtml(x.summary||'')}</td></tr>`).join('')||'<tr><td colspan="4">No diagnostic studies attached to this episode</td></tr>'}</tbody></table><p class="report-muted">Narrative studies are retained with provenance but are not automatically converted into Bayesian evidence in v0.6.</p>`:''}
+  ${state.settings.reportTreatments?`<h3>Medications & treatments</h3><table><thead><tr><th>Treatment</th><th>Type</th><th>Dates</th><th>Dose / route / frequency</th><th>Response</th></tr></thead><tbody>${treatments.map(t=>`<tr><td>${escapeHtml(t.name||'Treatment')}</td><td>${escapeHtml(t.type||'')}</td><td>${t.start?fmtDateTime(t.start):'—'}${t.end?' → '+fmtDateTime(t.end):' → ongoing'}</td><td>${escapeHtml([t.dose,t.route,t.frequency].filter(Boolean).join(' · '))}</td><td>${escapeHtml((t.response||'unknown').replace('_',' '))}</td></tr>`).join('')||'<tr><td colspan="5">No treatments attached to this episode</td></tr>'}</tbody></table><p class="report-muted">Treatment records are context only in v0.7.1 and do not automatically change condition scores.</p>`:''}
+  ${state.settings.reportStudies?`<h3>Diagnostic studies</h3><table><thead><tr><th>Time</th><th>Study</th><th>Interpretation</th><th>Summary</th></tr></thead><tbody>${studies.map(x=>`<tr><td>${x.time?fmtDateTime(x.time):'—'}</td><td>${escapeHtml(x.type||'Study')}${x.bodySite?' · '+escapeHtml(x.bodySite):''}</td><td>${escapeHtml(x.interpretation||'unspecified')}</td><td>${escapeHtml(x.summary||'')}</td></tr>`).join('')||'<tr><td colspan="4">No diagnostic studies attached to this episode</td></tr>'}</tbody></table><p class="report-muted">Narrative studies are retained with provenance but are not automatically converted into Bayesian evidence in v0.7.1.</p>`:''}
   ${state.settings.reportHistory?`<h3>Diagnosis & linked-history context</h3>${dx.length?`<table><thead><tr><th>Condition</th><th>Status</th><th>Date</th><th>Source</th><th>Prior context</th></tr></thead><tbody>${dx.map(d=>`<tr><td>${escapeHtml(diagnosisLabel(d))}</td><td>${escapeHtml(diagnosisStatusLabel(d.status))}</td><td>${escapeHtml(d.date||'—')}</td><td>${escapeHtml(d.source||'—')}</td><td>${d.useInModel?'enabled':'record only'}</td></tr>`).join('')}</tbody></table>`:'<p>No diagnoses recorded.</p>'}<p><strong>Linked prior episodes:</strong> ${linked.length?linked.map(e=>escapeHtml(e.title)+' ('+fmtDate(e.start)+')').join(', '):'None'}</p>`:''}
   ${state.settings.reportUrgency?`<h3>Current deterministic urgency flags</h3>${alerts.length?`<ul>${alerts.map(a=>`<li><strong>${escapeHtml(a.title)}:</strong> ${escapeHtml(a.message)}</li>`).join('')}</ul>`:'<p>No active urgency rules at report generation time.</p>'}`:''}
   ${state.settings.reportModel?`<h3>Top relative condition-pattern scores</h3><table><thead><tr><th>Condition pattern</th><th>Family</th><th>Score</th></tr></thead><tbody>${model.slice(0,15).map(h=>`<tr><td>${escapeHtml(h.label)}</td><td>${escapeHtml(h.family||'')}</td><td>${(h.score*100).toFixed(1)}%</td></tr>`).join('')}</tbody></table><p><strong>Important:</strong> These normalized Bayesian scores are generated by a non-validated heuristic model and are not disease probabilities, diagnoses, or rule-outs. The library includes an Other / unmodeled condition reserve.</p>`:''}
@@ -593,6 +751,7 @@ function renderSettingsPage(){
 }
 function bindLogForm(form){
   if(!form) return;
+  bindDateEntryHelpers(form);
   form.addEventListener('submit',async e=>{
     e.preventDefault(); const fd=new FormData(form); const status=String(fd.get('status')||'present'); const data={findingId:fd.get('findingId'),status,present:status==='present',time:new Date(fd.get('time')).toISOString(),severity:fd.get('severity'),confidence:fd.get('confidence')||'high',notes:fd.get('notes').trim()};
     if(editingObservationId){ const o=state.observations.find(x=>x.id===editingObservationId); Object.assign(o,data); }
@@ -600,6 +759,17 @@ function bindLogForm(form){
     await save(); editingObservationId=null; closeModal(); toast('Observation saved'); setView(currentView==='log'?'dashboard':currentView);
   });
 }
+async function recordQuickObservation(fid,status,notes='Logged from monitoring / information prompt.'){
+  const ep=activeEpisode();
+  if(ep?.trackingMode==='retrospective'){
+    openObservationModal(null,fid,status,episodeEntryDefaultTime(ep));
+    return;
+  }
+  const present=status==='present';
+  state.observations.push({id:uid(),episodeId:state.settings.activeEpisodeId,findingId:fid,status,present,time:new Date().toISOString(),severity:'medium',confidence:'high',notes});
+  await save(); toast('Observation added'); render();
+}
+
 function bindRenderedActions(){
   $$('[data-viewgo]').forEach(b=>b.onclick=()=>setView(b.dataset.viewgo));
   $$('[data-edit-obs]').forEach(b=>b.onclick=()=>openObservationModal(b.dataset.editObs));
@@ -612,7 +782,8 @@ function bindRenderedActions(){
   $$('[data-add-treatment]').forEach(b=>b.onclick=()=>openTreatmentModal());
   $$('[data-add-study]').forEach(b=>b.onclick=()=>openStudyModal());
   $$('[data-log-finding]').forEach(b=>b.onclick=()=>openObservationModal(null,b.dataset.logFinding));
-  $$('[data-quick-answer]').forEach(b=>b.onclick=async()=>{state.observations.push({id:uid(),episodeId:state.settings.activeEpisodeId,findingId:b.dataset.finding,status:b.dataset.quickAnswer==='yes'?'present':'checked_absent',present:b.dataset.quickAnswer==='yes',time:new Date().toISOString(),severity:'medium',confidence:'high',notes:'Logged from next-best observation prompt.'});await save();toast('Observation added');render();});
+  $$('[data-quick-answer]').forEach(b=>b.onclick=()=>recordQuickObservation(b.dataset.finding,b.dataset.quickAnswer==='yes'?'present':'checked_absent','Logged from new-information prompt.'));
+  $$('[data-monitor-status]').forEach(b=>b.onclick=()=>recordQuickObservation(b.dataset.finding,b.dataset.monitorStatus,'Logged from longitudinal reassessment queue.'));
   $$('[data-episode]').forEach(b=>b.onclick=async()=>{const ep=state.episodes.find(e=>e.id===b.dataset.episode && e.petId===state.settings.activePetId);if(!ep)return;state.settings.activeEpisodeId=ep.id;await save();render();updateContextButtons();});
   $$('[data-pet]').forEach(b=>b.onclick=()=>switchPet(b.dataset.pet));
   $$('[data-new-episode]').forEach(b=>b.onclick=openEpisodeModal);
@@ -631,11 +802,13 @@ function bindRenderedActions(){
   $('#profileForm')?.addEventListener('submit',saveProfile);
   $('#importFile')?.addEventListener('change',importJson);
 }
-function openObservationModal(id=null,presetFinding=null){
-  editingObservationId=id; const obs=id?state.observations.find(o=>o.id===id):null;
-  $('#modalEyebrow').textContent=obs?'EDIT OBSERVATION':'OBSERVATION'; $('#modalTitle').textContent=obs?'Edit observation':`Log observation for ${activePet().name}`;
+function openObservationModal(id=null,presetFinding=null,presetStatus=null,presetTime=null){
+  editingObservationId=id; const existing=id?state.observations.find(o=>o.id===id):null;
+  const obs=existing || ((presetFinding||presetStatus||presetTime)?{findingId:presetFinding||knowledge.findings.find(f=>f.sourceType!=='clinical')?.id,status:presetStatus||'present',present:(presetStatus||'present')==='present',time:presetTime||new Date().toISOString(),severity:'medium',confidence:'high',notes:''}:null);
+  $('#modalEyebrow').textContent=existing?'EDIT OBSERVATION':'OBSERVATION'; $('#modalTitle').textContent=existing?'Edit observation':`Log observation for ${activePet().name}`;
   $('#modalBody').innerHTML=logFormHtml(obs,'modalObservationForm');
   if(presetFinding) $('#modalObservationForm [name=findingId]').value=presetFinding;
+  if(presetStatus) $('#modalObservationForm [name=status]').value=presetStatus;
   $('#modalBackdrop').classList.remove('hidden'); bindLogForm($('#modalObservationForm'));
   $$('[data-delete-obs]',$('#modalBody')).forEach(b=>b.onclick=()=>deleteObservation(b.dataset.deleteObs));
 }
@@ -663,7 +836,7 @@ function interpretationFromForm(fd,template){
 function clinicalFormHtml(m=null){
   const templates=knowledge.measurementTemplates||[], cats=[...new Set(templates.map(t=>t.category))], selected=m?.templateId||templates[0]?.id||'custom';
   return `<form id="clinicalForm"><div class="form-row"><div class="field"><label>Measurement / test</label><select name="templateId">${cats.map(cat=>`<optgroup label="${escapeHtml(cat)}">${templates.filter(t=>t.category===cat).map(t=>`<option value="${t.id}" ${selected===t.id?'selected':''}>${escapeHtml(t.label)}</option>`).join('')}</optgroup>`).join('')}</select></div><div class="field"><label>Custom label</label><input name="label" placeholder="Used for Custom measurement / test" value="${escapeHtml(m?.label||'')}"></div></div>
-  <div class="form-row three clinical-value-row"><div class="field"><label>Date & time</label><input type="datetime-local" name="time" value="${m?toInputDate(m.time):nowLocalInput()}" required></div><div class="field"><label>Result / value</label><input name="value" value="${escapeHtml(m?.value||'')}" placeholder="e.g. 242 / positive" required></div><div class="field"><label>Unit</label><input name="unit" value="${escapeHtml(m?.unit||measurementTemplate(selected)?.unit||'')}" placeholder="optional"></div></div>
+  <div class="form-row three clinical-value-row"><div class="field"><label>Date & time</label><input type="datetime-local" name="time" value="${toInputDate(m?.time||episodeEntryDefaultTime())}" required>${dateEntryHelperHtml('time')}</div><div class="field"><label>Result / value</label><input name="value" value="${escapeHtml(m?.value||'')}" placeholder="e.g. 242 / positive" required></div><div class="field"><label>Unit</label><input name="unit" value="${escapeHtml(m?.unit||measurementTemplate(selected)?.unit||'')}" placeholder="optional"></div></div>
   <div class="form-row three clinical-reference-row"><div class="field"><label>Lab reference low</label><input name="refLow" inputmode="decimal" value="${escapeHtml(m?.refLow||'')}" placeholder="optional"></div><div class="field"><label>Lab reference high</label><input name="refHigh" inputmode="decimal" value="${escapeHtml(m?.refHigh||'')}" placeholder="optional"></div><div class="field"><label>Interpretation</label><select name="interpretation"><option value="auto" ${!m?'selected':''}>Auto (result/reference)</option>${['unspecified','low','normal','high','negative','trace','positive'].map(x=>`<option value="${x}" ${m?.interpretation===x?'selected':''}>${x[0].toUpperCase()+x.slice(1)}</option>`).join('')}</select></div></div>
   <div class="form-row"><div class="field"><label>Source</label><select name="source"><option value="vet_lab" ${m?.source==='vet_lab'||!m?'selected':''}>Veterinarian / laboratory</option><option value="home" ${m?.source==='home'?'selected':''}>Home measurement</option><option value="other" ${m?.source==='other'?'selected':''}>Other</option></select></div><div class="field"><label>Confidence</label><select name="confidence"><option value="high" ${!m||m?.confidence==='high'?'selected':''}>High</option><option value="medium" ${m?.confidence==='medium'?'selected':''}>Medium</option><option value="low" ${m?.confidence==='low'?'selected':''}>Low</option></select></div></div>
   <label class="checkbox"><input type="checkbox" name="attachEpisode" ${!m||m?.episodeId?'checked':''}> Attach to current episode (${escapeHtml(activeEpisode().title)})</label><label class="checkbox"><input type="checkbox" name="useInModel" ${(m?.useInModel || (!m && Object.keys(measurementTemplate(selected)?.modelMap||{}).length))?'checked':''}> Use mapped abnormal/positive interpretation as Bayesian evidence when supported</label>
@@ -671,6 +844,7 @@ function clinicalFormHtml(m=null){
 }
 function bindClinicalForm(){
   const form=$('#clinicalForm'); if(!form)return;
+  bindDateEntryHelpers(form);
   const select=form.querySelector('[name=templateId]'), unit=form.querySelector('[name=unit]'), modelBox=form.querySelector('[name=useInModel]');
   select.onchange=()=>{const t=measurementTemplate(select.value); if(t && (!unit.value || editingClinicalId===null)) unit.value=t.unit||''; if(editingClinicalId===null) modelBox.checked=!!Object.keys(t?.modelMap||{}).length;};
   form.onsubmit=async e=>{e.preventDefault();const fd=new FormData(form),t=measurementTemplate(fd.get('templateId'));const data={petId:state.settings.activePetId,episodeId:fd.get('attachEpisode')?state.settings.activeEpisodeId:null,templateId:fd.get('templateId'),label:String(fd.get('label')||'').trim(),time:new Date(fd.get('time')).toISOString(),value:String(fd.get('value')||'').trim(),unit:String(fd.get('unit')||'').trim(),refLow:String(fd.get('refLow')||'').trim(),refHigh:String(fd.get('refHigh')||'').trim(),interpretation:interpretationFromForm(fd,t),source:fd.get('source'),confidence:fd.get('confidence')||'high',useInModel:fd.get('useInModel')==='on',notes:String(fd.get('notes')||'').trim()};if(editingClinicalId){Object.assign(state.clinicalMeasurements.find(x=>x.id===editingClinicalId),data);}else state.clinicalMeasurements.push({id:uid(),...data});await save();editingClinicalId=null;closeModal();toast('Clinical result saved');render();};
@@ -681,11 +855,11 @@ function dietFormHtml(d=null){return `<form id="dietForm"><div class="form-row">
 function openDietModal(id=null){editingDietId=id;const d=id?state.diets.find(x=>x.id===id):null;$('#modalEyebrow').textContent='DIET';$('#modalTitle').textContent=d?'Edit food record':`Add food context for ${activePet().name}`;$('#modalBody').innerHTML=dietFormHtml(d);$('#modalBackdrop').classList.remove('hidden');const form=$('#dietForm');form.onsubmit=async e=>{e.preventDefault();const fd=new FormData(form);const data={petId:state.settings.activePetId,brand:String(fd.get('brand')||'').trim(),product:String(fd.get('product')||'').trim(),form:fd.get('form'),startDate:fd.get('startDate')||'',endDate:fd.get('endDate')||'',nutrientBasis:fd.get('nutrientBasis'),moisture:String(fd.get('moisture')||'').trim(),protein:String(fd.get('protein')||'').trim(),fat:String(fd.get('fat')||'').trim(),fiber:String(fd.get('fiber')||'').trim(),carbs:String(fd.get('carbs')||'').trim(),phosphorus:String(fd.get('phosphorus')||'').trim(),phosphorusUnit:fd.get('phosphorusUnit'),amount:String(fd.get('amount')||'').trim(),source:String(fd.get('source')||'').trim(),notes:String(fd.get('notes')||'').trim()};if(editingDietId){Object.assign(state.diets.find(x=>x.id===editingDietId),data);}else state.diets.push({id:uid(),...data});await save();editingDietId=null;closeModal();toast('Food context saved');render();};$$('[data-delete-diet]',$('#modalBody')).forEach(b=>b.onclick=()=>deleteDiet(b.dataset.deleteDiet));}
 async function deleteDiet(id){if(!confirm('Delete this food record?'))return;state.diets=state.diets.filter(d=>d.id!==id);editingDietId=null;closeModal();await save();toast('Food record deleted');render();}
 
-function treatmentFormHtml(t=null){return `<form id="treatmentForm"><div class="form-row"><div class="field"><label>Name</label><input name="name" value="${escapeHtml(t?.name||'')}" placeholder="e.g. insulin glargine, subcutaneous fluids" required></div><div class="field"><label>Type</label><select name="type">${['medication','fluid therapy','procedure','supplement','diet therapy','other'].map(x=>`<option value="${x}" ${t?.type===x||(!t&&x==='medication')?'selected':''}>${x}</option>`).join('')}</select></div></div><div class="form-row"><div class="field"><label>Start</label><input type="datetime-local" name="start" value="${t?.start?toInputDate(t.start):nowLocalInput()}" required></div><div class="field"><label>End</label><input type="datetime-local" name="end" value="${t?.end?toInputDate(t.end):''}"></div></div><div class="form-row three"><div class="field"><label>Dose / amount</label><input name="dose" value="${escapeHtml(t?.dose||'')}" placeholder="e.g. 1 unit"></div><div class="field"><label>Route</label><input name="route" value="${escapeHtml(t?.route||'')}" placeholder="SC, PO, IV..."></div><div class="field"><label>Frequency</label><input name="frequency" value="${escapeHtml(t?.frequency||'')}" placeholder="q12h, daily..."></div></div><div class="form-row"><div class="field"><label>Reason / indication</label><input name="reason" value="${escapeHtml(t?.reason||'')}"></div><div class="field"><label>Prescribed / directed by</label><input name="source" value="${escapeHtml(t?.source||'')}" placeholder="veterinarian, specialist, owner..."></div></div><div class="form-row"><div class="field"><label>Adherence</label><select name="adherence">${['unknown','as_directed','partial','missed_doses','stopped'].map(x=>`<option value="${x}" ${t?.adherence===x||(!t&&x==='unknown')?'selected':''}>${x.replaceAll('_',' ')}</option>`).join('')}</select></div><div class="field"><label>Observed response</label><select name="response">${['unknown','improved','no_change','worsened','mixed','adverse_effect'].map(x=>`<option value="${x}" ${t?.response===x||(!t&&x==='unknown')?'selected':''}>${x.replaceAll('_',' ')}</option>`).join('')}</select></div></div><label class="checkbox"><input type="checkbox" name="attachEpisode" ${!t||t?.episodeId?'checked':''}> Attach to current episode (${escapeHtml(activeEpisode().title)})</label><div class="field"><label>Adverse effects / observations</label><textarea name="adverse">${escapeHtml(t?.adverse||'')}</textarea></div><div class="field"><label>Notes / provenance</label><textarea name="notes">${escapeHtml(t?.notes||'')}</textarea><span class="helper">Treatment and response are retained as clinical context but are not used as automatic diagnostic evidence in v0.6, avoiding circular reasoning from treatment choices.</span></div><div class="form-actions">${t?`<button type="button" class="danger" data-delete-treatment="${t.id}">Delete</button>`:''}<button class="primary">${t?'Save changes':'Add treatment'}</button></div></form>`;}
-function openTreatmentModal(id=null){editingTreatmentId=id;const t=id?state.treatments.find(x=>x.id===id):null;$('#modalEyebrow').textContent='TREATMENT';$('#modalTitle').textContent=t?'Edit treatment':`Add treatment for ${activePet().name}`;$('#modalBody').innerHTML=treatmentFormHtml(t);$('#modalBackdrop').classList.remove('hidden');const form=$('#treatmentForm');form.onsubmit=async e=>{e.preventDefault();const fd=new FormData(form);const data={petId:state.settings.activePetId,episodeId:fd.get('attachEpisode')==='on'?state.settings.activeEpisodeId:null,name:String(fd.get('name')||'').trim(),type:String(fd.get('type')||'other'),start:new Date(fd.get('start')).toISOString(),end:fd.get('end')?new Date(fd.get('end')).toISOString():null,dose:String(fd.get('dose')||'').trim(),route:String(fd.get('route')||'').trim(),frequency:String(fd.get('frequency')||'').trim(),reason:String(fd.get('reason')||'').trim(),source:String(fd.get('source')||'').trim(),adherence:String(fd.get('adherence')||'unknown'),response:String(fd.get('response')||'unknown'),adverse:String(fd.get('adverse')||'').trim(),notes:String(fd.get('notes')||'').trim()};if(editingTreatmentId)Object.assign(state.treatments.find(x=>x.id===editingTreatmentId),data);else state.treatments.push({id:uid(),...data});await save();closeModal();toast('Treatment saved');render();};$$('[data-delete-treatment]',$('#modalBody')).forEach(b=>b.onclick=()=>deleteTreatment(b.dataset.deleteTreatment));}
+function treatmentFormHtml(t=null){return `<form id="treatmentForm"><div class="form-row"><div class="field"><label>Name</label><input name="name" value="${escapeHtml(t?.name||'')}" placeholder="e.g. insulin glargine, subcutaneous fluids" required></div><div class="field"><label>Type</label><select name="type">${['medication','fluid therapy','procedure','supplement','diet therapy','other'].map(x=>`<option value="${x}" ${t?.type===x||(!t&&x==='medication')?'selected':''}>${x}</option>`).join('')}</select></div></div><div class="form-row"><div class="field"><label>Start</label><input type="datetime-local" name="start" value="${toInputDate(t?.start||episodeEntryDefaultTime())}" required>${dateEntryHelperHtml('start')}</div><div class="field"><label>End</label><input type="datetime-local" name="end" value="${t?.end?toInputDate(t.end):''}"></div></div><div class="form-row three"><div class="field"><label>Dose / amount</label><input name="dose" value="${escapeHtml(t?.dose||'')}" placeholder="e.g. 1 unit"></div><div class="field"><label>Route</label><input name="route" value="${escapeHtml(t?.route||'')}" placeholder="SC, PO, IV..."></div><div class="field"><label>Frequency</label><input name="frequency" value="${escapeHtml(t?.frequency||'')}" placeholder="q12h, daily..."></div></div><div class="form-row"><div class="field"><label>Reason / indication</label><input name="reason" value="${escapeHtml(t?.reason||'')}"></div><div class="field"><label>Prescribed / directed by</label><input name="source" value="${escapeHtml(t?.source||'')}" placeholder="veterinarian, specialist, owner..."></div></div><div class="form-row"><div class="field"><label>Adherence</label><select name="adherence">${['unknown','as_directed','partial','missed_doses','stopped'].map(x=>`<option value="${x}" ${t?.adherence===x||(!t&&x==='unknown')?'selected':''}>${x.replaceAll('_',' ')}</option>`).join('')}</select></div><div class="field"><label>Observed response</label><select name="response">${['unknown','improved','no_change','worsened','mixed','adverse_effect'].map(x=>`<option value="${x}" ${t?.response===x||(!t&&x==='unknown')?'selected':''}>${x.replaceAll('_',' ')}</option>`).join('')}</select></div></div><label class="checkbox"><input type="checkbox" name="attachEpisode" ${!t||t?.episodeId?'checked':''}> Attach to current episode (${escapeHtml(activeEpisode().title)})</label><div class="field"><label>Adverse effects / observations</label><textarea name="adverse">${escapeHtml(t?.adverse||'')}</textarea></div><div class="field"><label>Notes / provenance</label><textarea name="notes">${escapeHtml(t?.notes||'')}</textarea><span class="helper">Treatment and response are retained as clinical context but are not used as automatic diagnostic evidence in v0.7.1, avoiding circular reasoning from treatment choices.</span></div><div class="form-actions">${t?`<button type="button" class="danger" data-delete-treatment="${t.id}">Delete</button>`:''}<button class="primary">${t?'Save changes':'Add treatment'}</button></div></form>`;}
+function openTreatmentModal(id=null){editingTreatmentId=id;const t=id?state.treatments.find(x=>x.id===id):null;$('#modalEyebrow').textContent='TREATMENT';$('#modalTitle').textContent=t?'Edit treatment':`Add treatment for ${activePet().name}`;$('#modalBody').innerHTML=treatmentFormHtml(t);$('#modalBackdrop').classList.remove('hidden');const form=$('#treatmentForm');bindDateEntryHelpers(form);form.onsubmit=async e=>{e.preventDefault();const fd=new FormData(form);const data={petId:state.settings.activePetId,episodeId:fd.get('attachEpisode')==='on'?state.settings.activeEpisodeId:null,name:String(fd.get('name')||'').trim(),type:String(fd.get('type')||'other'),start:new Date(fd.get('start')).toISOString(),end:fd.get('end')?new Date(fd.get('end')).toISOString():null,dose:String(fd.get('dose')||'').trim(),route:String(fd.get('route')||'').trim(),frequency:String(fd.get('frequency')||'').trim(),reason:String(fd.get('reason')||'').trim(),source:String(fd.get('source')||'').trim(),adherence:String(fd.get('adherence')||'unknown'),response:String(fd.get('response')||'unknown'),adverse:String(fd.get('adverse')||'').trim(),notes:String(fd.get('notes')||'').trim()};if(editingTreatmentId)Object.assign(state.treatments.find(x=>x.id===editingTreatmentId),data);else state.treatments.push({id:uid(),...data});await save();closeModal();toast('Treatment saved');render();};$$('[data-delete-treatment]',$('#modalBody')).forEach(b=>b.onclick=()=>deleteTreatment(b.dataset.deleteTreatment));}
 async function deleteTreatment(id){if(!confirm('Delete this treatment record?'))return;state.treatments=state.treatments.filter(x=>x.id!==id);await save();closeModal();toast('Treatment deleted');render();}
-function studyFormHtml(x=null){return `<form id="studyForm"><div class="form-row"><div class="field"><label>Study type</label><select name="type">${['ultrasound','radiograph','echocardiogram','CT','MRI','cytology','histopathology','endoscopy','physical exam finding','other'].map(v=>`<option value="${v}" ${x?.type===v||(!x&&v==='ultrasound')?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>Body site / label</label><input name="bodySite" value="${escapeHtml(x?.bodySite||'')}" placeholder="abdomen, thorax, kidney, mass..."></div></div><div class="form-row three"><div class="field"><label>Date & time</label><input type="datetime-local" name="time" value="${x?.time?toInputDate(x.time):nowLocalInput()}" required></div><div class="field"><label>Interpretation</label><select name="interpretation">${['unspecified','normal','abnormal','positive','negative','indeterminate'].map(v=>`<option value="${v}" ${x?.interpretation===v||(!x&&v==='unspecified')?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>Source</label><input name="source" value="${escapeHtml(x?.source||'')}" placeholder="clinic / radiologist / pathologist"></div></div><label class="checkbox"><input type="checkbox" name="attachEpisode" ${!x||x?.episodeId?'checked':''}> Attach to current episode (${escapeHtml(activeEpisode().title)})</label><div class="field"><label>Result summary</label><textarea name="summary" placeholder="Retain the actual impression/findings when possible.">${escapeHtml(x?.summary||'')}</textarea></div><div class="field"><label>Notes / provenance</label><textarea name="notes">${escapeHtml(x?.notes||'')}</textarea><span class="helper">Narrative study results are stored with provenance. v0.6 does not automatically convert free-text imaging/pathology into Bayesian evidence.</span></div><div class="form-actions">${x?`<button type="button" class="danger" data-delete-study="${x.id}">Delete</button>`:''}<button class="primary">${x?'Save changes':'Add study'}</button></div></form>`;}
-function openStudyModal(id=null){editingStudyId=id;const x=id?state.studies.find(y=>y.id===id):null;$('#modalEyebrow').textContent='DIAGNOSTIC STUDY';$('#modalTitle').textContent=x?'Edit diagnostic study':`Add diagnostic study for ${activePet().name}`;$('#modalBody').innerHTML=studyFormHtml(x);$('#modalBackdrop').classList.remove('hidden');const form=$('#studyForm');form.onsubmit=async e=>{e.preventDefault();const fd=new FormData(form);const data={petId:state.settings.activePetId,episodeId:fd.get('attachEpisode')==='on'?state.settings.activeEpisodeId:null,type:String(fd.get('type')||'other'),bodySite:String(fd.get('bodySite')||'').trim(),time:new Date(fd.get('time')).toISOString(),interpretation:String(fd.get('interpretation')||'unspecified'),source:String(fd.get('source')||'').trim(),summary:String(fd.get('summary')||'').trim(),notes:String(fd.get('notes')||'').trim()};if(editingStudyId)Object.assign(state.studies.find(y=>y.id===editingStudyId),data);else state.studies.push({id:uid(),...data});await save();closeModal();toast('Diagnostic study saved');render();};$$('[data-delete-study]',$('#modalBody')).forEach(b=>b.onclick=()=>deleteStudy(b.dataset.deleteStudy));}
+function studyFormHtml(x=null){return `<form id="studyForm"><div class="form-row"><div class="field"><label>Study type</label><select name="type">${['ultrasound','radiograph','echocardiogram','CT','MRI','cytology','histopathology','endoscopy','physical exam finding','other'].map(v=>`<option value="${v}" ${x?.type===v||(!x&&v==='ultrasound')?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>Body site / label</label><input name="bodySite" value="${escapeHtml(x?.bodySite||'')}" placeholder="abdomen, thorax, kidney, mass..."></div></div><div class="form-row three"><div class="field"><label>Date & time</label><input type="datetime-local" name="time" value="${toInputDate(x?.time||episodeEntryDefaultTime())}" required>${dateEntryHelperHtml('time')}</div><div class="field"><label>Interpretation</label><select name="interpretation">${['unspecified','normal','abnormal','positive','negative','indeterminate'].map(v=>`<option value="${v}" ${x?.interpretation===v||(!x&&v==='unspecified')?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>Source</label><input name="source" value="${escapeHtml(x?.source||'')}" placeholder="clinic / radiologist / pathologist"></div></div><label class="checkbox"><input type="checkbox" name="attachEpisode" ${!x||x?.episodeId?'checked':''}> Attach to current episode (${escapeHtml(activeEpisode().title)})</label><div class="field"><label>Result summary</label><textarea name="summary" placeholder="Retain the actual impression/findings when possible.">${escapeHtml(x?.summary||'')}</textarea></div><div class="field"><label>Notes / provenance</label><textarea name="notes">${escapeHtml(x?.notes||'')}</textarea><span class="helper">Narrative study results are stored with provenance. v0.7.1 does not automatically convert free-text imaging/pathology into Bayesian evidence.</span></div><div class="form-actions">${x?`<button type="button" class="danger" data-delete-study="${x.id}">Delete</button>`:''}<button class="primary">${x?'Save changes':'Add study'}</button></div></form>`;}
+function openStudyModal(id=null){editingStudyId=id;const x=id?state.studies.find(y=>y.id===id):null;$('#modalEyebrow').textContent='DIAGNOSTIC STUDY';$('#modalTitle').textContent=x?'Edit diagnostic study':`Add diagnostic study for ${activePet().name}`;$('#modalBody').innerHTML=studyFormHtml(x);$('#modalBackdrop').classList.remove('hidden');const form=$('#studyForm');bindDateEntryHelpers(form);form.onsubmit=async e=>{e.preventDefault();const fd=new FormData(form);const data={petId:state.settings.activePetId,episodeId:fd.get('attachEpisode')==='on'?state.settings.activeEpisodeId:null,type:String(fd.get('type')||'other'),bodySite:String(fd.get('bodySite')||'').trim(),time:new Date(fd.get('time')).toISOString(),interpretation:String(fd.get('interpretation')||'unspecified'),source:String(fd.get('source')||'').trim(),summary:String(fd.get('summary')||'').trim(),notes:String(fd.get('notes')||'').trim()};if(editingStudyId)Object.assign(state.studies.find(y=>y.id===editingStudyId),data);else state.studies.push({id:uid(),...data});await save();closeModal();toast('Diagnostic study saved');render();};$$('[data-delete-study]',$('#modalBody')).forEach(b=>b.onclick=()=>deleteStudy(b.dataset.deleteStudy));}
 async function deleteStudy(id){if(!confirm('Delete this diagnostic study?'))return;state.studies=state.studies.filter(x=>x.id!==id);await save();closeModal();toast('Diagnostic study deleted');render();}
 
 function diagnosisFormHtml(d=null){
@@ -709,9 +883,12 @@ async function deleteDiagnosis(id){ if(!confirm('Delete this diagnosis history r
 function openEpisodeEditModal(){
   const ep=activeEpisode(); if(!ep)return;
   $('#modalEyebrow').textContent='EPISODE'; $('#modalTitle').textContent='Edit episode';
-  $('#modalBody').innerHTML=`<form id="episodeEditForm"><div class="field"><label>Episode title</label><input name="title" value="${escapeHtml(ep.title)}" required></div><div class="form-row"><div class="field"><label>Start</label><input type="datetime-local" name="start" value="${toInputDate(ep.start)}" required></div><div class="field"><label>End</label><input type="datetime-local" name="end" value="${ep.end?toInputDate(ep.end):''}"></div></div><div class="field"><label>Status</label><select name="status"><option value="open" ${ep.status==='open'?'selected':''}>Open / ongoing</option><option value="closed" ${ep.status==='closed'?'selected':''}>Closed</option></select></div><div class="form-actions"><button class="primary">Save episode</button></div></form>`;
+  $('#modalBody').innerHTML=`<form id="episodeEditForm"><div class="field"><label>Episode title</label><input name="title" value="${escapeHtml(ep.title)}" required></div><div class="form-row"><div class="field"><label>Start</label><input type="datetime-local" name="start" value="${toInputDate(ep.start)}" required></div><div class="field"><label>End</label><input type="datetime-local" name="end" value="${ep.end?toInputDate(ep.end):''}"></div></div><div class="form-row"><div class="field"><label>Status</label><select name="status"><option value="open" ${ep.status==='open'?'selected':''}>Open / ongoing</option><option value="closed" ${ep.status==='closed'?'selected':''}>Closed</option></select></div><div class="field"><label>Tracking mode</label><select name="trackingMode"><option value="live" ${ep.trackingMode!=='retrospective'?'selected':''}>Live monitoring</option><option value="retrospective" ${ep.trackingMode==='retrospective'?'selected':''}>Retrospective reconstruction</option></select></div></div><div class="field"><label>Monitoring cadence</label><select name="monitoringCadence"><option value="intensive" ${ep.monitoringCadence==='intensive'?'selected':''}>Intensive — denser reassessment queue</option><option value="standard" ${!ep.monitoringCadence||ep.monitoringCadence==='standard'?'selected':''}>Standard</option><option value="sparse" ${ep.monitoringCadence==='sparse'?'selected':''}>Sparse — less frequent reassessment queue</option></select><span class="helper">This changes only the app's data-quality reassessment queue. It does not change Bayesian likelihoods or provide a veterinary follow-up schedule.</span></div><div class="field"><label>New-entry date default</label><select name="entryDateMode"><option value="latest_evidence" ${ep.entryDateMode==='latest_evidence'?'selected':''}>Latest episode entry — best for retrospective reconstruction</option><option value="current_time" ${ep.entryDateMode!=='latest_evidence'?'selected':''}>Current date & time — best for live logging</option></select><span class="helper">This only prefills new observation/result dates. Existing records and Bayesian weights are never changed.</span></div><div class="form-actions"><button class="primary">Save episode</button></div></form>`;
   $('#modalBackdrop').classList.remove('hidden');
-  $('#episodeEditForm').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);ep.title=String(fd.get('title')||'').trim()||ep.title;ep.start=new Date(fd.get('start')).toISOString();ep.end=fd.get('end')?new Date(fd.get('end')).toISOString():null;ep.status=fd.get('status');if(ep.status==='closed'&&!ep.end){const b=episodeEvidenceBounds(ep);ep.end=b?.last||new Date().toISOString();}await save();closeModal();updateContextButtons();toast('Episode updated');render();};
+  const editEpisodeForm=$('#episodeEditForm'), editTracking=editEpisodeForm.querySelector('[name=trackingMode]'), editEntryMode=editEpisodeForm.querySelector('[name=entryDateMode]');
+  let priorTrackingMode=ep.trackingMode||'live';
+  editTracking.onchange=()=>{const priorDefault=priorTrackingMode==='retrospective'?'latest_evidence':'current_time';if(editEntryMode.value===priorDefault)editEntryMode.value=editTracking.value==='retrospective'?'latest_evidence':'current_time';priorTrackingMode=editTracking.value;};
+  editEpisodeForm.onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);ep.title=String(fd.get('title')||'').trim()||ep.title;ep.start=new Date(fd.get('start')).toISOString();ep.end=fd.get('end')?new Date(fd.get('end')).toISOString():null;ep.status=fd.get('status');ep.trackingMode=fd.get('trackingMode')||'live';ep.monitoringCadence=fd.get('monitoringCadence')||'standard';ep.entryDateMode=fd.get('entryDateMode')|| (ep.trackingMode==='retrospective'?'latest_evidence':'current_time');if(ep.status==='closed'&&!ep.end){const b=episodeEvidenceBounds(ep);ep.end=b?.last||new Date().toISOString();}await save();closeModal();updateContextButtons();toast('Episode updated');render();};
 }
 async function alignEpisodeToEvidence(){
   const ep=activeEpisode(), b=episodeEvidenceBounds(ep); if(!ep||!b)return;
@@ -721,9 +898,11 @@ async function alignEpisodeToEvidence(){
 function openEpisodeModal(){
   const pet=activePet(), eps=petEpisodes();
   $('#modalEyebrow').textContent='EPISODE';$('#modalTitle').textContent=`Start new episode for ${pet.name}`;
-  $('#modalBody').innerHTML=`<form id="episodeForm"><div class="field"><label>Episode title</label><input name="title" value="Episode ${eps.length+1}" required></div><div class="field"><label>Start</label><input type="datetime-local" name="start" value="${nowLocalInput()}" required></div><label class="checkbox"><input type="checkbox" name="closeCurrent" checked> Close ${escapeHtml(activeEpisode().title)} when this one starts</label><div class="form-actions"><button class="primary">Start episode</button></div></form>`;
+  $('#modalBody').innerHTML=`<form id="episodeForm"><div class="field"><label>Episode title</label><input name="title" value="Episode ${eps.length+1}" required></div><div class="field"><label>Start</label><input type="datetime-local" name="start" value="${nowLocalInput()}" required></div><div class="form-row"><div class="field"><label>Tracking mode</label><select name="trackingMode"><option value="live" selected>Live monitoring</option><option value="retrospective">Retrospective reconstruction</option></select></div><div class="field"><label>Monitoring cadence</label><select name="monitoringCadence"><option value="intensive">Intensive</option><option value="standard" selected>Standard</option><option value="sparse">Sparse</option></select></div></div><div class="field"><label>New-entry date default</label><select name="entryDateMode"><option value="current_time" selected>Current date & time</option><option value="latest_evidence">Latest episode entry</option></select><span class="helper">For retrospective episodes, Latest episode entry prevents prompted observations from jumping to today's date.</span></div><label class="checkbox"><input type="checkbox" name="closeCurrent" checked> Close ${escapeHtml(activeEpisode().title)} when this one starts</label><div class="form-actions"><button class="primary">Start episode</button></div></form>`;
   $('#modalBackdrop').classList.remove('hidden');
-  $('#episodeForm').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);const start=new Date(fd.get('start')).toISOString();if(fd.get('closeCurrent')){const cur=activeEpisode();if(cur){cur.status='closed';cur.end=start;}}const ep=makeEpisode(pet.id,fd.get('title').trim(),start);state.episodes.push(ep);state.settings.activeEpisodeId=ep.id;await save();closeModal();updateContextButtons();render();};
+  const episodeForm=$('#episodeForm'), trackingSelect=episodeForm.querySelector('[name=trackingMode]'), entrySelect=episodeForm.querySelector('[name=entryDateMode]');
+  trackingSelect.onchange=()=>{entrySelect.value=trackingSelect.value==='retrospective'?'latest_evidence':'current_time';};
+  episodeForm.onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);const start=new Date(fd.get('start')).toISOString();if(fd.get('closeCurrent')){const cur=activeEpisode();if(cur){cur.status='closed';cur.end=start;}}const ep=makeEpisode(pet.id,fd.get('title').trim(),start);ep.trackingMode=fd.get('trackingMode')||'live';ep.monitoringCadence=fd.get('monitoringCadence')||'standard';ep.entryDateMode=fd.get('entryDateMode')|| (ep.trackingMode==='retrospective'?'latest_evidence':'current_time');state.episodes.push(ep);state.settings.activeEpisodeId=ep.id;await save();closeModal();updateContextButtons();render();};
 }
 function openPetModal(){
   $('#modalEyebrow').textContent='PET'; $('#modalTitle').textContent='Add pet';
@@ -789,7 +968,7 @@ function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.remove('hi
 
 async function init(){
   try{
-    knowledge=await fetch('./data/cat-knowledge-v0.6.json').then(r=>{if(!r.ok)throw new Error('Knowledge pack failed to load');return r.json();});
+    knowledge=await fetch('./data/cat-knowledge-v0.7.json').then(r=>{if(!r.ok)throw new Error('Knowledge pack failed to load');return r.json();});
     const stored=await dbGet('state');
     state=migrateState(stored || defaultState());
     state.settings.modelPack=knowledge.packId;

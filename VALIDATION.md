@@ -1,4 +1,4 @@
-# Bayesian Symptom Tracker v0.6.0 — Validation Record
+# Bayesian Symptom Tracker v0.7.1 — Validation Record
 
 Date: 2026-09-26
 
@@ -7,12 +7,14 @@ Date: 2026-09-26
 Passed:
 
 - `node --check app.js`
-- `python -m json.tool data/cat-knowledge-v0.6.json`
-- v0.6 knowledge-pack rebuild via `tools/upgrade_knowledge_v06.py`
-- knowledge-pack coverage counts agree with the actual arrays
+- `python -m json.tool data/cat-knowledge-v0.7.json`
+- v0.7 knowledge-pack rebuild via `tools/upgrade_knowledge_v07.py`
+- knowledge-pack monitoring metadata covers every owner-observable finding
+- knowledge-pack condition/finding coverage counts remain internally consistent
 - GitHub Pages uses relative local assets only
-- service worker caches `cat-knowledge-v0.6.json`
+- service worker caches `cat-knowledge-v0.7.json`
 - no server-side dependency introduced
+- service-worker cache key bumped for v0.7.1 asset refresh
 
 ## Knowledge-pack / inference regression tests
 
@@ -20,23 +22,48 @@ Passed:
 
 - schema/provenance integrity
 - 95 named condition patterns plus explicit Other/unmodeled reserve retained
-- source references for demographic modifiers, quantitative anchors, and trend mappings resolve
 - broad canonical patterns across several systems, including hyperthyroidism, diabetes mellitus, FIP, urethral obstruction, congestive heart failure, pancreatitis, and CKD with renal clinical evidence
 - repeated owner observations become saturating longitudinal evidence rather than independent duplicate tests
-- state changes preserve historical evidence while keeping the latest state primary
+- state changes preserve earlier evidence while keeping the latest state primary
 - explicit symptom resolution is retained without deleting the original event
-- a 400 mg/dL glucose record retains greater quantitative evidence weight than a barely-above-anchor value, without being converted into a diagnosis
+- numeric clinical magnitude remains available to the clinical-evidence layer
 - repeated clinical values saturate rather than multiply without bound
-- serial body-weight measurements can derive a measured weight-change trend
-- correlated evidence remains visible but receives dependency discounts
+- serial body-weight measurements can derive measured weight-change evidence
+- correlated findings remain visible but receive dependency discounts
 - deterministic urgency rules remain separate from Bayesian inference
+
+## Retrospective entry-date regression tests
+
+v0.7.1 adds explicit tests that:
+
+- legacy historical episodes migrate to `entryDateMode = latest_evidence`
+- a retrospective episode prefills new observations from its latest recorded evidence timestamp rather than wall-clock time
+- the observation form exposes one-click **Use latest episode entry** and **Use current time** controls
+- changing the entry-date default does not change Bayesian condition scores
+- live/default episodes retain current-time entry behavior unless the user explicitly chooses otherwise
+
+## Monitoring / reassessment regression tests
+
+v0.7 adds explicit tests that:
+
+- 20 repeated observations of one persistent symptom produce one reassessment target, not 20 queue items
+- the Bayesian evidence weight still saturates independently of monitoring frequency
+- an explicitly resolved symptom leaves the ongoing reassessment queue while its history remains in the timeline
+- a single event can later generate a recurrence check
+- mutually exclusive state groups monitor only the latest current state rather than stale sibling states
+- intensive/standard/sparse cadence changes monitoring timing only and does not change condition scores
+- the new-information queue does not ask contradictory sibling-state questions after that state group has already been observed
+- linked prior episodes never populate the current episode’s monitoring queue
 
 ## State / longitudinal regression tests
 
 `node tests/state-smoke.mjs` passes:
 
-- previous state migrates to state schema 5
-- diagnoses, treatments, studies, and linked-episode structures are created without removing old records
+- previous state migrates to state schema 7
+- episode tracking mode and monitoring cadence are created without removing older records
+- legacy clearly historical episodes migrate to retrospective tracking
+- retrospective monitoring uses the latest episode evidence as its reference rather than wall-clock time
+- diagnoses, treatments, studies, and linked-episode structures remain intact
 - diet remains non-inferential
 - treatments remain non-inferential
 - diagnostic-study narrative context remains non-inferential
@@ -44,36 +71,35 @@ Passed:
 - prior episodes do not influence the current episode until explicitly linked
 - linked-history evidence enters at reduced weight
 - retrospective evidence bounds are derived from raw record timestamps
-- demographic analysis start automatically uses earlier retrospective evidence when episode metadata starts too late
-- urgency age is calculated from the actual triggering red-flag observation rather than an unrelated newer study/result
+- demographic analysis start respects earlier retrospective evidence when episode metadata starts too late
+- urgency age is calculated from the actual triggering red-flag observation rather than unrelated newer context
 - numeric trend regression does not mix different units
-- same-unit serial measurements can still derive trend evidence
-- Context, History, and Model pages expose the new controls and audit information in application-side rendering tests
+- Context, History, Model, and Monitoring pages expose their controls in application-side rendering tests
 
 ## Supplied-case audit
 
-The user's supplied v0.4 JSON is retained as an **audit case**, not as a target-answer regression test. No assertion says that diabetes, CKD, or any other condition must rank first.
+The user-supplied historical JSON remains an **audit case**, not a target-answer regression test. No test asserts that diabetes, CKD, or any other condition must rank first.
 
-Running that unchanged case through the generalized v0.6 inference pipeline currently gives approximately:
+Running the unchanged case through v0.7.1 gives the same inference ordering as v0.7 because the entry-date workflow does not alter priors, likelihoods, or existing evidence timestamps:
 
 - Diabetes mellitus: **15.92%** relative pattern-consistency
 - Diabetic ketoacidosis: **4.12%**
 - Multicentric/systemic lymphoma: **3.44%**
 - Chronic kidney disease: **3.21%**
 
-These values are **not diagnostic probabilities** and the ordering is not treated as validation. The audit is useful because it confirms that the case is being reprocessed through the same general rules as every other case.
+These values are **not diagnostic probabilities** and their ordering is not treated as validation.
 
-For that audit case, v0.6 derives owner evidence from persistence/recurrence rather than duplicate rows, preserves the 400 mg/dL glucose as quantitative clinical evidence, applies dependency discounting to related PU/PD evidence, and uses patient age at the effective retrospective analysis start.
+Migration identifies the supplied historical episode as retrospective. Its monitoring reference and default timestamp for newly prompted entries are based on the latest dated evidence in the episode rather than the current date. Existing historical timestamps are never rewritten.
 
 ## Browser rendering
 
-A fresh Chromium CLI rendering pass is not claimed for v0.6. The Chromium binary in this container has been hanging before normal headless completion, including on a trivial page, which is an environment-level limitation observed during the prior release work.
+A fresh end-to-end browser screenshot is not required for the v0.7.1 inference checks. Chromium can launch in this environment, but navigation to the local HTTP test server is blocked by the container/browser administrator policy (`ERR_BLOCKED_BY_ADMINISTRATOR`).
 
-Application-side render functions are exercised through the Node VM tests. Older-version screenshots are not presented as v0.6 screenshots.
+Application-side rendering and timestamp-default behavior are exercised through the Node VM regression suite.
 
 ## Important model limitations
 
-v0.6 remains an experimental inference framework and is **not clinically validated**.
+v0.7.1 remains an experimental inference framework and is **not clinically validated**.
 
 Important remaining work includes:
 
@@ -83,9 +109,11 @@ Important remaining work includes:
 - more complete dependency/correlation structures rather than heuristic group discounts
 - structured evidence mappings for imaging, pathology, physical examination, and other diagnostic studies
 - treatment-response modeling that avoids indication and circularity bias
-- robust unit conversion/normalization where conversions are scientifically unambiguous; v0.6 instead separates unlike units
-- more quantitative trend mappings beyond body weight, creatinine, and SDMA
-- a richer monitoring/question engine that can intentionally re-check persistent states over long episodes instead of treating every previously asked question as permanently complete
+- robust scientific unit conversion/normalization where conversions are unambiguous
+- additional quantitative trend mappings beyond body weight, creatinine, and SDMA
+- configurable per-finding monitoring plans rather than only episode-level cadence density
+- optional structured clinical-series monitoring without turning laboratory follow-up timing into medical advice
+- calibration of the monitoring priority heuristic against real longitudinal use
 - external prospective validation before any diagnostic or clinical-decision claim
 
-The app deliberately preserves raw records and provenance so later inference versions can reprocess historical data without requiring re-entry.
+The app deliberately preserves raw records and provenance so future inference and monitoring models can reprocess historical data without requiring re-entry.

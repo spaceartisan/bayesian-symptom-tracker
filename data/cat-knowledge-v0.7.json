@@ -1,0 +1,3697 @@
+{
+  "schemaVersion": 7,
+  "packId": "cat-practical-differentials-v0.7",
+  "species": "cat",
+  "modelStatus": "experimental / research-oriented, not clinically validated",
+  "modelNotice": "Experimental, non-clinically validated feline differential-pattern model. Relative scores are not disease probabilities. Longitudinal monitoring prompts are data-quality heuristics, not veterinary recheck recommendations.",
+  "coverage": {
+    "scope": "Practical feline differential library with owner observations, longitudinal symptom states, quantitative clinical trends, structured measurements, prior diagnoses, linked historical episodes, treatment/study context, demographic context, monitoring/reassessment metadata, and an explicit unmodeled reserve.",
+    "conditionCount": 96,
+    "namedConditionCount": 95,
+    "findingCount": 139,
+    "ownerFindingCount": 109,
+    "clinicalFindingCount": 30,
+    "measurementTemplateCount": 30,
+    "familyCount": 17,
+    "priorPolicy": "Base hypothesis priors remain deliberately broad. Small source-backed demographic modifiers and explicit prior-diagnosis modifiers are applied transparently. Correlated evidence is conservatively discounted rather than assumed independent. These remain heuristic context adjustments, not epidemiologic disease probabilities.",
+    "inferenceArchitecture": "Raw records are preserved. Inference uses temporal summaries, quantitative trends, correlation-aware evidence weighting, clinical/history context and transparent prior adjustments. A separate monitoring engine prioritizes longitudinal re-checks without treating repeated checks as independent diagnostic evidence."
+  },
+  "hypotheses": [
+    {
+      "id": "acute_gastroenteritis",
+      "label": "Acute gastroenteritis",
+      "family": "Gastrointestinal",
+      "description": "Acute stomach/intestinal inflammation pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "dietary_intolerance",
+      "label": "Dietary intolerance / food reaction",
+      "family": "Gastrointestinal",
+      "description": "Pattern associated with food-related GI signs.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "gi_foreign_body",
+      "label": "Gastrointestinal foreign body / obstruction",
+      "family": "Gastrointestinal",
+      "description": "Pattern associated with obstructive ingested material.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "hairball_gi",
+      "label": "Hairball-related GI irritation",
+      "family": "Gastrointestinal",
+      "description": "Retching/vomiting pattern with hairball evidence.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "ibd_chronic_enteropathy",
+      "label": "Inflammatory bowel disease / chronic enteropathy",
+      "family": "Gastrointestinal",
+      "description": "Chronic inflammatory intestinal disease pattern.",
+      "sourceRefs": [
+        "cornell_ibd"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "gi_lymphoma",
+      "label": "Gastrointestinal lymphoma",
+      "family": "Gastrointestinal",
+      "description": "GI neoplasia pattern that can overlap strongly with chronic enteropathy.",
+      "sourceRefs": [
+        "merck_gi_cancer",
+        "merck_lymphoma"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "intestinal_parasites",
+      "label": "Gastrointestinal parasites",
+      "family": "Gastrointestinal",
+      "description": "Enteric parasite pattern, especially with exposure risk.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "constipation",
+      "label": "Constipation / obstipation",
+      "family": "Gastrointestinal",
+      "description": "Infrequent or difficult passage of hard stool.",
+      "sourceRefs": [
+        "merck_constipation"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "megacolon",
+      "label": "Megacolon",
+      "family": "Gastrointestinal",
+      "description": "Chronic severe colonic hypomotility and obstipation pattern.",
+      "sourceRefs": [
+        "merck_megacolon"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "colitis",
+      "label": "Colitis / large-bowel inflammation",
+      "family": "Gastrointestinal",
+      "description": "Large-bowel inflammatory pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "gi_ulcer_bleeding",
+      "label": "GI ulceration / gastrointestinal bleeding",
+      "family": "Gastrointestinal",
+      "description": "Pattern associated with upper GI bleeding and systemic illness.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "exocrine_pancreatic_insufficiency",
+      "label": "Exocrine pancreatic insufficiency",
+      "family": "Gastrointestinal",
+      "description": "Maldigestion pattern with weight loss despite appetite.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "pancreatitis",
+      "label": "Pancreatitis",
+      "family": "Hepatobiliary / Pancreatic",
+      "description": "Pancreatic inflammation pattern; feline signs are often nonspecific.",
+      "sourceRefs": [
+        "cornell_pancreatitis"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "triaditis",
+      "label": "Triaditis pattern",
+      "family": "Hepatobiliary / Pancreatic",
+      "description": "Concurrent inflammatory disease involving pancreas, intestine, and biliary tract.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "cholangitis",
+      "label": "Cholangitis / cholangiohepatitis",
+      "family": "Hepatobiliary / Pancreatic",
+      "description": "Inflammatory biliary/liver pattern.",
+      "sourceRefs": [
+        "merck_cholangitis"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "hepatic_lipidosis",
+      "label": "Hepatic lipidosis",
+      "family": "Hepatobiliary / Pancreatic",
+      "description": "Fatty liver syndrome pattern often following marked anorexia and weight loss.",
+      "sourceRefs": [
+        "merck_hepatic_lipidosis"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "chronic_hepatopathy",
+      "label": "Chronic liver disease / hepatopathy",
+      "family": "Hepatobiliary / Pancreatic",
+      "description": "Chronic liver dysfunction pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "biliary_obstruction",
+      "label": "Biliary obstruction",
+      "family": "Hepatobiliary / Pancreatic",
+      "description": "Obstructive cholestatic pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "chronic_kidney_disease",
+      "label": "Chronic kidney disease",
+      "family": "Renal / Urinary",
+      "description": "Progressive renal dysfunction pattern common in older cats.",
+      "sourceRefs": [
+        "cornell_ckd"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "acute_kidney_injury",
+      "label": "Acute kidney injury",
+      "family": "Renal / Urinary",
+      "description": "Sudden renal dysfunction pattern with variable urine output.",
+      "sourceRefs": [
+        "merck_aki"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "pyelonephritis",
+      "label": "Kidney infection / pyelonephritis",
+      "family": "Renal / Urinary",
+      "description": "Upper urinary tract infection pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "bacterial_uti",
+      "label": "Bacterial urinary tract infection",
+      "family": "Renal / Urinary",
+      "description": "Lower urinary infection pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "feline_idiopathic_cystitis",
+      "label": "Feline idiopathic cystitis",
+      "family": "Renal / Urinary",
+      "description": "Sterile lower urinary tract inflammation pattern often associated with stress.",
+      "sourceRefs": [
+        "cornell_flutd"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "urolithiasis",
+      "label": "Urinary stones / urolithiasis",
+      "family": "Renal / Urinary",
+      "description": "Lower urinary signs associated with urinary calculi.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "urethral_obstruction",
+      "label": "Urethral obstruction",
+      "family": "Renal / Urinary",
+      "description": "Life-threatening urinary outflow obstruction pattern.",
+      "sourceRefs": [
+        "cornell_flutd"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "renal_neoplasia",
+      "label": "Renal neoplasia",
+      "family": "Renal / Urinary",
+      "description": "Kidney tumor pattern, including lymphoma or other renal masses.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "diabetes_mellitus",
+      "label": "Diabetes mellitus",
+      "family": "Endocrine / Metabolic",
+      "description": "Hyperglycemic metabolic pattern.",
+      "sourceRefs": [
+        "cornell_diabetes",
+        "merck_diabetes"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "diabetic_ketoacidosis",
+      "label": "Diabetic ketoacidosis",
+      "family": "Endocrine / Metabolic",
+      "description": "Acute decompensated diabetes pattern.",
+      "sourceRefs": [
+        "cornell_diabetes"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "hyperthyroidism",
+      "label": "Hyperthyroidism",
+      "family": "Endocrine / Metabolic",
+      "description": "Thyroid hormone excess pattern, especially in middle-aged and older cats.",
+      "sourceRefs": [
+        "cornell_hyperthyroidism"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "hypersomatotropism",
+      "label": "Hypersomatotropism / acromegaly",
+      "family": "Endocrine / Metabolic",
+      "description": "Growth-hormone excess pattern often associated with difficult diabetes control.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "hyperaldosteronism",
+      "label": "Primary hyperaldosteronism",
+      "family": "Endocrine / Metabolic",
+      "description": "Mineralocorticoid excess pattern that can cause weakness and hypertension.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "hypercalcemia",
+      "label": "Hypercalcemia syndrome",
+      "family": "Endocrine / Metabolic",
+      "description": "Elevated-calcium pattern with GI, urinary, and weakness signs.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "hypokalemia",
+      "label": "Hypokalemia / potassium depletion",
+      "family": "Endocrine / Metabolic",
+      "description": "Low-potassium pattern with characteristic muscle weakness.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "hypertrophic_cardiomyopathy",
+      "label": "Hypertrophic cardiomyopathy",
+      "family": "Cardiovascular",
+      "description": "Common feline cardiomyopathy; may be silent or present with CHF/thromboembolism.",
+      "sourceRefs": [
+        "cornell_hcm"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "congestive_heart_failure",
+      "label": "Congestive heart failure",
+      "family": "Cardiovascular",
+      "description": "Clinical heart-failure pattern with fluid accumulation affecting breathing.",
+      "sourceRefs": [
+        "cornell_hcm"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "arterial_thromboembolism",
+      "label": "Arterial thromboembolism / saddle thrombus",
+      "family": "Cardiovascular",
+      "description": "Acute arterial clot pattern, often affecting hind limbs.",
+      "sourceRefs": [
+        "cornell_hcm"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "systemic_hypertension",
+      "label": "Systemic hypertension",
+      "family": "Cardiovascular",
+      "description": "High blood pressure pattern, often secondary to renal or endocrine disease.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "arrhythmia",
+      "label": "Clinically significant arrhythmia",
+      "family": "Cardiovascular",
+      "description": "Abnormal cardiac rhythm pattern with weakness, collapse, or exercise intolerance.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "feline_asthma",
+      "label": "Feline asthma",
+      "family": "Respiratory",
+      "description": "Inflammatory lower-airway disease pattern.",
+      "sourceRefs": [
+        "cornell_asthma"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "upper_respiratory_infection",
+      "label": "Upper respiratory infection",
+      "family": "Respiratory",
+      "description": "Common infectious upper-airway pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "pneumonia",
+      "label": "Pneumonia",
+      "family": "Respiratory",
+      "description": "Lower respiratory infection/inflammation pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "pleural_effusion",
+      "label": "Pleural effusion",
+      "family": "Respiratory",
+      "description": "Fluid around the lungs causing restrictive breathing.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "pulmonary_edema",
+      "label": "Pulmonary edema",
+      "family": "Respiratory",
+      "description": "Fluid within lung tissue, often cardiogenic.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "lungworm",
+      "label": "Lungworm / pulmonary parasitism",
+      "family": "Respiratory",
+      "description": "Parasitic respiratory pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "nasal_neoplasia",
+      "label": "Nasal tumor / chronic nasal mass",
+      "family": "Respiratory",
+      "description": "Chronic upper-airway neoplasia pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "heartworm_respiratory_disease",
+      "label": "Feline heartworm-associated respiratory disease",
+      "family": "Respiratory",
+      "description": "Heartworm-associated respiratory pattern that can mimic asthma.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "fip",
+      "label": "Feline infectious peritonitis (FIP)",
+      "family": "Infectious / Immune",
+      "description": "Systemic coronavirus-associated inflammatory disease pattern.",
+      "sourceRefs": [
+        "cornell_fip"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "felv_related",
+      "label": "FeLV-associated disease",
+      "family": "Infectious / Immune",
+      "description": "Feline leukemia virus–associated systemic disease pattern.",
+      "sourceRefs": [
+        "cornell_felv"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "fiv_related",
+      "label": "FIV-associated disease",
+      "family": "Infectious / Immune",
+      "description": "Feline immunodeficiency virus–associated immunocompromise pattern.",
+      "sourceRefs": [
+        "cornell_fiv"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "panleukopenia",
+      "label": "Feline panleukopenia",
+      "family": "Infectious / Immune",
+      "description": "Acute severe viral GI/systemic disease pattern.",
+      "sourceRefs": [
+        "cornell_panleukopenia"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "toxoplasmosis",
+      "label": "Clinical toxoplasmosis",
+      "family": "Infectious / Immune",
+      "description": "Multisystem protozoal disease pattern.",
+      "sourceRefs": [
+        "merck_toxoplasmosis"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "abscess_cellulitis",
+      "label": "Abscess / cellulitis",
+      "family": "Infectious / Immune",
+      "description": "Localized bacterial infection pattern, often after bite or wound.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "sepsis",
+      "label": "Sepsis / severe systemic infection",
+      "family": "Infectious / Immune",
+      "description": "Critical systemic infection pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "cryptococcosis",
+      "label": "Cryptococcosis",
+      "family": "Infectious / Immune",
+      "description": "Systemic fungal disease often involving nasal, neurologic, or ocular signs.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "feline_calicivirus",
+      "label": "Feline calicivirus infection",
+      "family": "Infectious / Immune",
+      "description": "Viral upper-respiratory/oral disease pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "feline_herpesvirus",
+      "label": "Feline herpesvirus respiratory disease",
+      "family": "Infectious / Immune",
+      "description": "Viral upper respiratory and ocular disease pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "anemia",
+      "label": "Anemia",
+      "family": "Hematologic / Oncologic",
+      "description": "Reduced red-cell mass pattern regardless of cause.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "hemolytic_anemia",
+      "label": "Hemolytic anemia",
+      "family": "Hematologic / Oncologic",
+      "description": "Red-cell destruction pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "multicentric_lymphoma",
+      "label": "Multicentric / systemic lymphoma",
+      "family": "Hematologic / Oncologic",
+      "description": "Systemic lymphoid neoplasia pattern.",
+      "sourceRefs": [
+        "merck_lymphoma"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "leukemia",
+      "label": "Leukemia / marrow neoplasia",
+      "family": "Hematologic / Oncologic",
+      "description": "Blood/marrow neoplasia pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "mast_cell_disease",
+      "label": "Mast cell tumor / systemic mast cell disease",
+      "family": "Hematologic / Oncologic",
+      "description": "Cutaneous or visceral mast-cell neoplasia pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "mammary_carcinoma",
+      "label": "Mammary carcinoma",
+      "family": "Hematologic / Oncologic",
+      "description": "Mammary-chain neoplasia pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "oral_squamous_cell_carcinoma",
+      "label": "Oral squamous cell carcinoma",
+      "family": "Hematologic / Oncologic",
+      "description": "Aggressive oral neoplasia pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "multiple_myeloma",
+      "label": "Multiple myeloma / plasma-cell neoplasia",
+      "family": "Hematologic / Oncologic",
+      "description": "Systemic plasma-cell malignancy pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "seizure_disorder",
+      "label": "Primary or recurrent seizure disorder",
+      "family": "Neurologic",
+      "description": "Pattern dominated by recurrent seizure activity.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "vestibular_disease",
+      "label": "Vestibular disease",
+      "family": "Neurologic",
+      "description": "Balance-system disorder pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "intracranial_mass",
+      "label": "Intracranial mass / brain tumor",
+      "family": "Neurologic",
+      "description": "Progressive intracranial disease pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "encephalitis_meningitis",
+      "label": "Encephalitis / meningoencephalitis",
+      "family": "Neurologic",
+      "description": "Inflammatory central nervous system pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "cognitive_dysfunction",
+      "label": "Cognitive dysfunction syndrome",
+      "family": "Neurologic",
+      "description": "Age-related cognitive/behavioral decline pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "spinal_neurologic_disease",
+      "label": "Spinal cord / peripheral neurologic disease",
+      "family": "Neurologic",
+      "description": "Spinal or peripheral nerve dysfunction pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "thiamine_deficiency",
+      "label": "Thiamine deficiency",
+      "family": "Neurologic",
+      "description": "Nutritional neurologic syndrome pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "periodontal_disease",
+      "label": "Periodontal / dental disease",
+      "family": "Oral / Dental",
+      "description": "Dental inflammation and infection pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "gingivostomatitis",
+      "label": "Feline chronic gingivostomatitis",
+      "family": "Oral / Dental",
+      "description": "Severe chronic oral inflammatory disease pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "tooth_resorption",
+      "label": "Tooth resorption",
+      "family": "Oral / Dental",
+      "description": "Painful feline dental resorptive lesion pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "oral_foreign_body",
+      "label": "Oral foreign body",
+      "family": "Oral / Dental",
+      "description": "Foreign material lodged in the mouth or pharynx.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "osteoarthritis",
+      "label": "Osteoarthritis / degenerative joint disease",
+      "family": "Musculoskeletal / Pain",
+      "description": "Chronic mobility-pain pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "trauma_fracture",
+      "label": "Trauma / fracture",
+      "family": "Musculoskeletal / Pain",
+      "description": "Acute injury pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "soft_tissue_pain",
+      "label": "Soft-tissue pain / sprain",
+      "family": "Musculoskeletal / Pain",
+      "description": "Localized pain without obvious fracture pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "allergic_dermatitis",
+      "label": "Allergic dermatitis",
+      "family": "Dermatologic",
+      "description": "Pruritic allergic skin disease pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "flea_allergy",
+      "label": "Flea allergy dermatitis",
+      "family": "Dermatologic",
+      "description": "Pruritic flea-associated hypersensitivity pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "ringworm",
+      "label": "Dermatophytosis / ringworm",
+      "family": "Dermatologic",
+      "description": "Fungal skin disease pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "eosinophilic_granuloma",
+      "label": "Eosinophilic granuloma complex",
+      "family": "Dermatologic",
+      "description": "Allergic/inflammatory skin and oral lesion pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "general_toxin_exposure",
+      "label": "Toxin exposure / poisoning",
+      "family": "Toxic / Environmental",
+      "description": "General acute toxic exposure pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "lily_toxicity",
+      "label": "Lily toxicity",
+      "family": "Toxic / Environmental",
+      "description": "True-lily/daylily exposure pattern causing acute kidney injury.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "ethylene_glycol_toxicity",
+      "label": "Ethylene glycol / antifreeze toxicity",
+      "family": "Toxic / Environmental",
+      "description": "Antifreeze exposure pattern causing neurologic signs and acute kidney injury.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "acetaminophen_toxicity",
+      "label": "Acetaminophen toxicity",
+      "family": "Toxic / Environmental",
+      "description": "Oxidative toxin pattern in cats.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "permethrin_toxicity",
+      "label": "Permethrin toxicity",
+      "family": "Toxic / Environmental",
+      "description": "Pyrethroid toxicity pattern in cats.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "heatstroke",
+      "label": "Heatstroke / hyperthermia",
+      "family": "Toxic / Environmental",
+      "description": "Severe environmental hyperthermia pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "pyometra",
+      "label": "Pyometra",
+      "family": "Reproductive",
+      "description": "Uterine infection pattern in intact females.",
+      "sourceRefs": [
+        "merck_pyometra"
+      ],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "mastitis",
+      "label": "Mastitis",
+      "family": "Reproductive",
+      "description": "Inflammation/infection of mammary tissue.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "glaucoma_uveitis",
+      "label": "Glaucoma / uveitis pattern",
+      "family": "Ophthalmic",
+      "description": "Painful intraocular disease pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "retinal_detachment",
+      "label": "Retinal detachment",
+      "family": "Ophthalmic",
+      "description": "Acute vision-loss pattern, often associated with hypertension.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "corneal_ulcer",
+      "label": "Corneal ulcer / ocular surface injury",
+      "family": "Ophthalmic",
+      "description": "Painful corneal surface disease pattern.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "stress_behavioral",
+      "label": "Stress / environmental behavior change",
+      "family": "Behavioral / Iatrogenic",
+      "description": "Behavioral and appetite/elimination changes associated with stress.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "medication_adverse_effect",
+      "label": "Medication / treatment adverse effect",
+      "family": "Behavioral / Iatrogenic",
+      "description": "Temporal pattern after a medication or treatment.",
+      "sourceRefs": [],
+      "prior": 0.01031578947368421
+    },
+    {
+      "id": "other_unmodeled",
+      "label": "Other / unmodeled condition",
+      "family": "Other",
+      "description": "Reserve hypothesis for conditions not represented in this experimental library.",
+      "sourceRefs": [],
+      "prior": 0.02
+    }
+  ],
+  "findings": [
+    {
+      "id": "appetite_normal",
+      "category": "Appetite",
+      "label": "Appetite normal",
+      "question": "Is appetite currently normal?",
+      "stateGroup": "appetite_state",
+      "temporalMode": "state",
+      "monitoringClass": "baseline_state"
+    },
+    {
+      "id": "appetite_reduced",
+      "category": "Appetite",
+      "label": "Appetite reduced",
+      "question": "Is appetite reduced?",
+      "stateGroup": "appetite_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "appetite_absent",
+      "category": "Appetite",
+      "label": "Refusing food",
+      "question": "Is the cat refusing food?",
+      "stateGroup": "appetite_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "appetite_increased",
+      "category": "Appetite",
+      "label": "Appetite increased",
+      "question": "Is appetite clearly increased compared with normal?",
+      "stateGroup": "appetite_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "thirst_normal",
+      "category": "Water",
+      "label": "Thirst normal",
+      "question": "Is water intake currently normal?",
+      "stateGroup": "thirst_state",
+      "temporalMode": "state",
+      "monitoringClass": "baseline_state"
+    },
+    {
+      "id": "thirst_increased",
+      "category": "Water",
+      "label": "Increased thirst",
+      "question": "Has thirst clearly increased?",
+      "stateGroup": "thirst_state",
+      "temporalMode": "state",
+      "evidenceGroup": "polyuria_polydipsia",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "thirst_decreased",
+      "category": "Water",
+      "label": "Decreased thirst",
+      "question": "Has water intake clearly decreased?",
+      "stateGroup": "thirst_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "urine_normal",
+      "category": "Urination",
+      "label": "Urine volume normal",
+      "question": "Is total urine output / litter-clump volume normal?",
+      "stateGroup": "urine_volume_state",
+      "temporalMode": "state",
+      "monitoringClass": "baseline_state"
+    },
+    {
+      "id": "urine_increased",
+      "category": "Urination",
+      "label": "Urine volume increased / larger clumps",
+      "question": "Has urine output or litter-clump volume clearly increased?",
+      "stateGroup": "urine_volume_state",
+      "temporalMode": "state",
+      "evidenceGroup": "polyuria_polydipsia",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "urine_reduced",
+      "category": "Urination",
+      "label": "Urine volume reduced / smaller output",
+      "question": "Has total urine output clearly decreased?",
+      "stateGroup": "urine_volume_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "energy_normal",
+      "category": "Energy",
+      "label": "Energy normal",
+      "question": "Is activity / energy normal?",
+      "stateGroup": "energy_state",
+      "temporalMode": "state",
+      "monitoringClass": "baseline_state"
+    },
+    {
+      "id": "energy_low",
+      "category": "Energy",
+      "label": "Low energy / lethargy",
+      "question": "Is energy noticeably reduced?",
+      "stateGroup": "energy_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "energy_increased",
+      "category": "Energy",
+      "label": "Increased activity / hyperactivity",
+      "question": "Is activity clearly increased or unusually restless?",
+      "stateGroup": "energy_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "weight_stable",
+      "category": "Weight",
+      "label": "Weight stable",
+      "question": "Has body weight remained stable?",
+      "stateGroup": "weight_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "weight_loss",
+      "category": "Weight",
+      "label": "Unplanned weight loss",
+      "question": "Has there been unplanned weight loss?",
+      "stateGroup": "weight_state",
+      "temporalMode": "state",
+      "evidenceGroup": "weight_change",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "weight_gain",
+      "category": "Weight",
+      "label": "Unplanned weight gain",
+      "question": "Has there been unplanned weight gain?",
+      "stateGroup": "weight_state",
+      "temporalMode": "state",
+      "evidenceGroup": "weight_change",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "stool_normal",
+      "category": "Stool",
+      "label": "Stool normal",
+      "question": "Is stool currently normal?",
+      "stateGroup": "stool_consistency_state",
+      "temporalMode": "state",
+      "monitoringClass": "baseline_state"
+    },
+    {
+      "id": "stool_diarrhea",
+      "category": "Stool",
+      "label": "Diarrhea / loose stool",
+      "question": "Is there diarrhea or loose stool?",
+      "stateGroup": "stool_consistency_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "stool_hard_dry",
+      "category": "Stool",
+      "label": "Hard / dry stool",
+      "question": "Is stool unusually hard or dry?",
+      "stateGroup": "stool_consistency_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "vomit_single",
+      "category": "Vomiting",
+      "label": "Single vomiting episode",
+      "question": "Was there a single vomiting episode?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "vomit_repeated",
+      "category": "Vomiting",
+      "label": "Repeated vomiting / retching",
+      "question": "Has vomiting or retching repeated?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "vomit_blood",
+      "category": "Vomiting",
+      "label": "Blood in vomit",
+      "question": "Is there blood in the vomit?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "vomit_hairball",
+      "category": "Vomiting",
+      "label": "Hairball produced",
+      "question": "Was a hairball produced or clearly present?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "stool_blood",
+      "category": "Stool",
+      "label": "Fresh blood in stool",
+      "question": "Is there fresh blood in the stool?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "stool_black",
+      "category": "Stool",
+      "label": "Black / tarry stool",
+      "question": "Is the stool black or tarry?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "stool_mucus",
+      "category": "Stool",
+      "label": "Mucus in stool",
+      "question": "Is there visible mucus in the stool?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "stool_frequent",
+      "category": "Stool",
+      "label": "Frequent small bowel movements",
+      "question": "Are bowel movements unusually frequent and small?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "stool_none",
+      "category": "Stool",
+      "label": "Little / no stool produced",
+      "question": "Has little or no stool been produced despite expected bowel movements?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "stool_straining",
+      "category": "Stool",
+      "label": "Straining to defecate",
+      "question": "Is the cat repeatedly straining to pass stool?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "abd_pain",
+      "category": "Abdomen",
+      "label": "Abdominal pain / guarding",
+      "question": "Is there apparent abdominal pain or guarding?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "abd_distended",
+      "category": "Abdomen",
+      "label": "Abdominal enlargement / distension",
+      "question": "Is the abdomen newly enlarged or distended?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "urine_small_frequent",
+      "category": "Urination",
+      "label": "Frequent small urinations",
+      "question": "Are there frequent small urinations?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "urine_straining",
+      "category": "Urination",
+      "label": "Straining to urinate",
+      "question": "Is the cat straining to urinate?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "urine_none",
+      "category": "Urination",
+      "label": "Unable to urinate / no urine",
+      "question": "Is the cat unable to pass urine?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "urine_blood",
+      "category": "Urination",
+      "label": "Blood in urine",
+      "question": "Is there visible blood in the urine?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "urine_outside_box",
+      "category": "Urination",
+      "label": "Urinating outside litter box",
+      "question": "Is the cat urinating outside the litter box unusually?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "genital_licking",
+      "category": "Urination",
+      "label": "Increased genital licking",
+      "question": "Is genital-area licking increased?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "urine_dark",
+      "category": "Urination",
+      "label": "Dark / brown urine",
+      "question": "Is the urine unusually dark or brown?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "resp_rapid",
+      "category": "Breathing",
+      "label": "Rapid resting breathing",
+      "question": "Is resting breathing clearly faster than usual?",
+      "temporalMode": "event",
+      "evidenceGroup": "respiratory_distress",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "resp_distress",
+      "category": "Breathing",
+      "label": "Labored / difficult breathing",
+      "question": "Is breathing difficult or labored?",
+      "temporalMode": "event",
+      "evidenceGroup": "respiratory_distress",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "open_mouth_breathing",
+      "category": "Breathing",
+      "label": "Open-mouth breathing / panting",
+      "question": "Is there open-mouth breathing or panting?",
+      "temporalMode": "event",
+      "evidenceGroup": "respiratory_distress",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "cough",
+      "category": "Breathing",
+      "label": "Coughing / hacking",
+      "question": "Is there coughing or hacking?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "wheeze",
+      "category": "Breathing",
+      "label": "Wheezing",
+      "question": "Is wheezing audible?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "sneeze",
+      "category": "Nose / airway",
+      "label": "Sneezing",
+      "question": "Is sneezing increased?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "nasal_discharge",
+      "category": "Nose / airway",
+      "label": "Nasal discharge",
+      "question": "Is there nasal discharge?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "nasal_blood",
+      "category": "Nose / airway",
+      "label": "Nosebleed / bloody nasal discharge",
+      "question": "Is there blood from the nose?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "ocular_discharge",
+      "category": "Eyes",
+      "label": "Eye discharge / watery eyes",
+      "question": "Is there new eye discharge or excessive tearing?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "fever_high",
+      "category": "Temperature",
+      "label": "Fever / elevated temperature",
+      "question": "Is an elevated body temperature documented?",
+      "stateGroup": "temperature_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "temp_low",
+      "category": "Temperature",
+      "label": "Low body temperature",
+      "question": "Is a low body temperature documented?",
+      "stateGroup": "temperature_state",
+      "temporalMode": "state",
+      "monitoringClass": "state"
+    },
+    {
+      "id": "dehydration",
+      "category": "Hydration",
+      "label": "Dehydration signs",
+      "question": "Are dehydration signs present?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "pale_gums",
+      "category": "Appearance",
+      "label": "Pale gums / mucous membranes",
+      "question": "Do the gums look unusually pale?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "yellow_gums",
+      "category": "Appearance",
+      "label": "Yellow gums / jaundice",
+      "question": "Is there yellow discoloration of the gums, skin, or eyes?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "blue_gums",
+      "category": "Appearance",
+      "label": "Blue / gray gums",
+      "question": "Are the gums or tongue blue-gray?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "poor_coat",
+      "category": "Appearance",
+      "label": "Poor / unkempt coat",
+      "question": "Has the coat become unusually greasy, matted, or unkempt?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "enlarged_nodes",
+      "category": "Appearance",
+      "label": "Enlarged lymph nodes",
+      "question": "Are enlarged lymph nodes or persistent swellings known?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "weakness",
+      "category": "Energy",
+      "label": "Generalized weakness",
+      "question": "Is there generalized weakness?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "collapse",
+      "category": "Neurologic",
+      "label": "Collapse / unresponsive",
+      "question": "Has the cat collapsed or become unresponsive?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "hiding",
+      "category": "Behavior",
+      "label": "Hiding / social withdrawal",
+      "question": "Is hiding or social withdrawal increased?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "restless",
+      "category": "Behavior",
+      "label": "Restlessness / unable to settle",
+      "question": "Is the cat unusually restless or unable to settle?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "vocalization",
+      "category": "Behavior",
+      "label": "Unusual crying / vocalization",
+      "question": "Is there unusual crying, yowling, or pain vocalization?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "confusion",
+      "category": "Behavior",
+      "label": "Confusion / disorientation",
+      "question": "Is there new confusion or disorientation?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "grooming_reduced",
+      "category": "Behavior",
+      "label": "Reduced grooming",
+      "question": "Has normal grooming decreased?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "grooming_increased",
+      "category": "Behavior",
+      "label": "Excessive grooming",
+      "question": "Has grooming or licking become excessive?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "drooling",
+      "category": "Mouth",
+      "label": "Drooling / excessive salivation",
+      "question": "Is there new or excessive drooling?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "bad_breath",
+      "category": "Mouth",
+      "label": "Marked bad breath",
+      "question": "Is breath markedly worse than usual?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "oral_pain",
+      "category": "Mouth",
+      "label": "Mouth pain / trouble eating",
+      "question": "Does eating appear painful or is food dropped from the mouth?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "mouth_ulcers",
+      "category": "Mouth",
+      "label": "Mouth / tongue ulcers",
+      "question": "Are ulcers or sores visible in the mouth or on the tongue?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "difficulty_swallowing",
+      "category": "Mouth",
+      "label": "Difficulty swallowing",
+      "question": "Is swallowing difficult or abnormal?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "pawing_mouth",
+      "category": "Mouth",
+      "label": "Pawing at mouth / face",
+      "question": "Is the cat repeatedly pawing at the mouth or face?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "oral_mass",
+      "category": "Mouth",
+      "label": "Oral mass / persistent mouth bleeding",
+      "question": "Is there a visible oral mass or persistent oral bleeding?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "seizure",
+      "category": "Neurologic",
+      "label": "Seizure activity",
+      "question": "Has seizure activity occurred?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "ataxia",
+      "category": "Neurologic",
+      "label": "Ataxia / uncoordinated walking",
+      "question": "Is walking newly uncoordinated or wobbly?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "head_tilt",
+      "category": "Neurologic",
+      "label": "Head tilt / balance problem",
+      "question": "Is there a new head tilt or major balance problem?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "tremor",
+      "category": "Neurologic",
+      "label": "Tremor / twitching",
+      "question": "Are tremors or abnormal twitching present?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "sudden_blindness",
+      "category": "Eyes",
+      "label": "Sudden apparent blindness",
+      "question": "Has vision appeared to be lost suddenly?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "eye_red_pain",
+      "category": "Eyes",
+      "label": "Red / painful eye",
+      "question": "Is an eye markedly red, squinting, or painful?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "cloudy_eye",
+      "category": "Eyes",
+      "label": "Cloudy eye",
+      "question": "Has an eye become cloudy?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "limping",
+      "category": "Mobility",
+      "label": "Limping / not bearing weight",
+      "question": "Is there limping or refusal to bear weight?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "stiffness",
+      "category": "Mobility",
+      "label": "Stiffness / difficulty rising",
+      "question": "Is there stiffness or difficulty rising?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "reduced_jumping",
+      "category": "Mobility",
+      "label": "Reduced jumping / climbing",
+      "question": "Has jumping or climbing ability decreased?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "hindlimb_weakness",
+      "category": "Mobility",
+      "label": "Hind-limb weakness",
+      "question": "Is there new hind-limb weakness?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "hindlimb_paralysis",
+      "category": "Mobility",
+      "label": "Sudden hind-limb paralysis",
+      "question": "Is there sudden inability to use one or both hind limbs?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "cold_painful_hindfeet",
+      "category": "Mobility",
+      "label": "Cold / painful hind feet",
+      "question": "Are hind paws unusually cold and painful?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "neck_ventroflexion",
+      "category": "Mobility",
+      "label": "Neck ventroflexion / head held down",
+      "question": "Is the neck weak so the head is held abnormally downward?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "pain_severe",
+      "category": "Pain",
+      "label": "Severe / obvious pain",
+      "question": "Is there severe or obvious pain?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "itching",
+      "category": "Skin",
+      "label": "Itching / scratching",
+      "question": "Is itching or scratching increased?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "hair_loss",
+      "category": "Skin",
+      "label": "Patchy hair loss",
+      "question": "Is there patchy or unusual hair loss?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "skin_scaling",
+      "category": "Skin",
+      "label": "Scaly / crusted skin lesions",
+      "question": "Are there scaly, crusted, or circular skin lesions?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "skin_swelling",
+      "category": "Skin",
+      "label": "Skin swelling / abscess / draining wound",
+      "question": "Is there a painful swelling, abscess, or draining skin wound?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "skin_lump",
+      "category": "Skin",
+      "label": "New skin / subcutaneous lump",
+      "question": "Is there a new persistent skin or subcutaneous lump?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "mammary_lump",
+      "category": "Skin",
+      "label": "Mammary-chain lump",
+      "question": "Is there a lump along the mammary chain?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "vaginal_discharge",
+      "category": "Reproductive",
+      "label": "Vaginal discharge",
+      "question": "Is there abnormal vaginal discharge?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "food_change",
+      "category": "Context",
+      "label": "Recent food / treat change",
+      "question": "Was food or treats recently changed?",
+      "temporalMode": "context",
+      "monitoringClass": "context_once"
+    },
+    {
+      "id": "medication_recent",
+      "category": "Context",
+      "label": "Recent medication / treatment",
+      "question": "Was medication or treatment recently given?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "stress_event",
+      "category": "Context",
+      "label": "Recent stress / environmental change",
+      "question": "Was there a recent stressor or environmental change?",
+      "temporalMode": "context",
+      "monitoringClass": "context_once"
+    },
+    {
+      "id": "toxin_possible",
+      "category": "Exposure",
+      "label": "Possible toxin exposure",
+      "question": "Is toxin exposure known or possible?",
+      "temporalMode": "context",
+      "monitoringClass": "context_once"
+    },
+    {
+      "id": "lily_exposure",
+      "category": "Exposure",
+      "label": "Possible lily exposure",
+      "question": "Could the cat have contacted or ingested any part of a true lily or daylily?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "antifreeze_possible",
+      "category": "Exposure",
+      "label": "Possible antifreeze exposure",
+      "question": "Could ethylene glycol / antifreeze exposure have occurred?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "acetaminophen_possible",
+      "category": "Exposure",
+      "label": "Possible acetaminophen exposure",
+      "question": "Could acetaminophen / paracetamol exposure have occurred?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "permethrin_possible",
+      "category": "Exposure",
+      "label": "Possible dog flea-product / permethrin exposure",
+      "question": "Could a permethrin-containing dog flea product have contacted the cat?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "foreign_object_possible",
+      "category": "Exposure",
+      "label": "Possible foreign-object ingestion",
+      "question": "Could a foreign object have been swallowed?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "trauma",
+      "category": "Exposure",
+      "label": "Recent trauma / injury",
+      "question": "Was there recent trauma or injury?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "new_cat_exposure",
+      "category": "Context",
+      "label": "Recent exposure to unfamiliar cats",
+      "question": "Was there recent close exposure to unfamiliar cats?",
+      "temporalMode": "context",
+      "monitoringClass": "context_once"
+    },
+    {
+      "id": "unvaccinated",
+      "category": "Context",
+      "label": "Vaccinations incomplete / unknown",
+      "question": "Are core vaccinations incomplete or unknown?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "intact_female",
+      "category": "Context",
+      "label": "Unspayed / intact female",
+      "question": "Is the cat an unspayed female?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "recurrent_infections",
+      "category": "Context",
+      "label": "Recurrent or unusual infections",
+      "question": "Have recurrent or unusually persistent infections occurred?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "chronic_course",
+      "category": "Context",
+      "label": "Chronic / recurrent course",
+      "question": "Has the problem persisted or recurred over weeks to months?",
+      "temporalMode": "context",
+      "monitoringClass": "context_once"
+    },
+    {
+      "id": "acute_onset",
+      "category": "Context",
+      "label": "Sudden / acute onset",
+      "question": "Did the problem begin suddenly?",
+      "temporalMode": "context",
+      "monitoringClass": "context_once"
+    },
+    {
+      "id": "anorexia_2d",
+      "category": "Context",
+      "label": "Little or no food for ~2 days",
+      "question": "Has the cat eaten little or nothing for roughly two days?",
+      "temporalMode": "event",
+      "monitoringClass": "event"
+    },
+    {
+      "id": "blood_glucose_high",
+      "category": "Clinical · Chemistry",
+      "label": "Blood glucose above reference range",
+      "question": "Blood glucose above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical",
+      "evidenceGroup": "glycemic_dysregulation"
+    },
+    {
+      "id": "blood_glucose_low",
+      "category": "Clinical · Chemistry",
+      "label": "Blood glucose below reference range",
+      "question": "Blood glucose below reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "fructosamine_high",
+      "category": "Clinical · Chemistry",
+      "label": "Fructosamine above reference range",
+      "question": "Fructosamine above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical",
+      "evidenceGroup": "glycemic_dysregulation"
+    },
+    {
+      "id": "creatinine_high",
+      "category": "Clinical · Chemistry",
+      "label": "Creatinine above reference range",
+      "question": "Creatinine above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical",
+      "evidenceGroup": "renal_filtration"
+    },
+    {
+      "id": "bun_high",
+      "category": "Clinical · Chemistry",
+      "label": "BUN / urea above reference range",
+      "question": "BUN / urea above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical",
+      "evidenceGroup": "renal_filtration"
+    },
+    {
+      "id": "sdma_high",
+      "category": "Clinical · Chemistry",
+      "label": "SDMA above reference range",
+      "question": "SDMA above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical",
+      "evidenceGroup": "renal_filtration"
+    },
+    {
+      "id": "phosphorus_high",
+      "category": "Clinical · Chemistry",
+      "label": "Phosphorus above reference range",
+      "question": "Phosphorus above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "alt_high",
+      "category": "Clinical · Chemistry",
+      "label": "ALT above reference range",
+      "question": "ALT above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical",
+      "evidenceGroup": "hepatobiliary"
+    },
+    {
+      "id": "alp_high",
+      "category": "Clinical · Chemistry",
+      "label": "ALP above reference range",
+      "question": "ALP above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical",
+      "evidenceGroup": "hepatobiliary"
+    },
+    {
+      "id": "bilirubin_high",
+      "category": "Clinical · Chemistry",
+      "label": "Total bilirubin above reference range",
+      "question": "Total bilirubin above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical",
+      "evidenceGroup": "hepatobiliary"
+    },
+    {
+      "id": "albumin_low",
+      "category": "Clinical · Chemistry",
+      "label": "Albumin below reference range",
+      "question": "Albumin below reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "potassium_low",
+      "category": "Clinical · Chemistry",
+      "label": "Potassium below reference range",
+      "question": "Potassium below reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "potassium_high",
+      "category": "Clinical · Chemistry",
+      "label": "Potassium above reference range",
+      "question": "Potassium above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "calcium_high",
+      "category": "Clinical · Chemistry",
+      "label": "Calcium above reference range",
+      "question": "Calcium above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "pcv_low",
+      "category": "Clinical · Hematology",
+      "label": "PCV / hematocrit below reference range",
+      "question": "PCV / hematocrit below reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "wbc_high",
+      "category": "Clinical · Hematology",
+      "label": "White blood cell count above reference range",
+      "question": "White blood cell count above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "total_t4_high",
+      "category": "Clinical · Endocrine",
+      "label": "Total T4 above reference range",
+      "question": "Total T4 above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "urine_glucose_positive",
+      "category": "Clinical · Urinalysis",
+      "label": "Urine glucose positive",
+      "question": "Urine glucose positive",
+      "sourceType": "clinical",
+      "temporalMode": "clinical",
+      "evidenceGroup": "glycemic_dysregulation"
+    },
+    {
+      "id": "urine_ketones_positive",
+      "category": "Clinical · Urinalysis",
+      "label": "Urine ketones positive",
+      "question": "Urine ketones positive",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "urine_specific_gravity_low",
+      "category": "Clinical · Urinalysis",
+      "label": "Urine specific gravity interpreted as low / inadequately concentrated",
+      "question": "Urine specific gravity interpreted as low / inadequately concentrated",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "urine_protein_positive",
+      "category": "Clinical · Urinalysis",
+      "label": "Urine protein / UPC interpreted as positive or elevated",
+      "question": "Urine protein / UPC interpreted as positive or elevated",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "urine_culture_positive",
+      "category": "Clinical · Urinalysis",
+      "label": "Urine culture positive",
+      "question": "Urine culture positive",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "fpl_high",
+      "category": "Clinical · Specialized",
+      "label": "Feline pancreatic lipase result above reference range",
+      "question": "Feline pancreatic lipase result above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "ntprobnp_high",
+      "category": "Clinical · Specialized",
+      "label": "NT-proBNP above reference range",
+      "question": "NT-proBNP above reference range",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "felv_positive",
+      "category": "Clinical · Infectious testing",
+      "label": "FeLV test positive",
+      "question": "FeLV test positive",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "fiv_positive",
+      "category": "Clinical · Infectious testing",
+      "label": "FIV test positive",
+      "question": "FIV test positive",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "fecal_parasites_positive",
+      "category": "Clinical · Infectious testing",
+      "label": "Fecal parasite test positive",
+      "question": "Fecal parasite test positive",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "blood_pressure_high",
+      "category": "Clinical · Vitals",
+      "label": "Systolic blood pressure interpreted as high",
+      "question": "Systolic blood pressure interpreted as high",
+      "sourceType": "clinical",
+      "temporalMode": "clinical"
+    },
+    {
+      "id": "creatinine_rising",
+      "category": "Clinical · Trend",
+      "label": "Creatinine rising over serial measurements",
+      "question": "Is creatinine rising over serial measurements?",
+      "sourceType": "clinical",
+      "temporalMode": "trend",
+      "evidenceGroup": "renal_filtration"
+    },
+    {
+      "id": "sdma_rising",
+      "category": "Clinical · Trend",
+      "label": "SDMA rising over serial measurements",
+      "question": "Is SDMA rising over serial measurements?",
+      "sourceType": "clinical",
+      "temporalMode": "trend",
+      "evidenceGroup": "renal_filtration"
+    }
+  ],
+  "measurementTemplates": [
+    {
+      "id": "body_weight",
+      "label": "Body weight",
+      "category": "Vitals",
+      "unit": "lb",
+      "kind": "numeric",
+      "modelMap": {},
+      "trendMap": {
+        "decreasing": "weight_loss",
+        "increasing": "weight_gain"
+      },
+      "trendSourceRef": "aaha_aafp_lifestage",
+      "trendRole": "Measured body-weight change is retained and summarized as a longitudinal trend."
+    },
+    {
+      "id": "temperature",
+      "label": "Body temperature",
+      "category": "Vitals",
+      "unit": "°F",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "fever_high",
+        "low": "temp_low"
+      }
+    },
+    {
+      "id": "resting_resp_rate",
+      "label": "Resting respiratory rate",
+      "category": "Vitals",
+      "unit": "breaths/min",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "resp_rapid"
+      }
+    },
+    {
+      "id": "systolic_bp",
+      "label": "Systolic blood pressure",
+      "category": "Vitals",
+      "unit": "mmHg",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "blood_pressure_high"
+      }
+    },
+    {
+      "id": "blood_glucose",
+      "label": "Blood glucose",
+      "category": "Chemistry",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "blood_glucose_high",
+        "low": "blood_glucose_low"
+      },
+      "quantitativeAnchor": {
+        "direction": "high",
+        "value": 280,
+        "unit": "mg/dL",
+        "sourceRef": "merck_diabetes",
+        "role": "renal glucose threshold context; not a diagnostic cutoff"
+      }
+    },
+    {
+      "id": "fructosamine",
+      "label": "Fructosamine",
+      "category": "Chemistry",
+      "unit": "µmol/L",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "fructosamine_high"
+      }
+    },
+    {
+      "id": "creatinine",
+      "label": "Creatinine",
+      "category": "Chemistry",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "creatinine_high"
+      },
+      "quantitativeAnchor": {
+        "direction": "high",
+        "value": 1.6,
+        "unit": "mg/dL",
+        "sourceRef": "iris_ckd",
+        "role": "feline IRIS staging context; stable CKD only"
+      },
+      "trendMap": {
+        "increasing": "creatinine_rising"
+      },
+      "trendSourceRef": "merck_renal_dysfunction",
+      "trendRole": "Serial increases can be clinically relevant even when individual values remain within a reference interval."
+    },
+    {
+      "id": "bun",
+      "label": "BUN / urea",
+      "category": "Chemistry",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "bun_high"
+      }
+    },
+    {
+      "id": "sdma",
+      "label": "SDMA",
+      "category": "Chemistry",
+      "unit": "µg/dL",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "sdma_high"
+      },
+      "quantitativeAnchor": {
+        "direction": "high",
+        "value": 14,
+        "unit": "µg/dL",
+        "sourceRef": "iris_ckd",
+        "role": "IRIS persistent elevation context; interpret with clinical findings"
+      },
+      "trendMap": {
+        "increasing": "sdma_rising"
+      },
+      "trendSourceRef": "merck_renal_dysfunction",
+      "trendRole": "Serial SDMA trends can reveal declining renal function over time."
+    },
+    {
+      "id": "phosphorus",
+      "label": "Phosphorus",
+      "category": "Chemistry",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "phosphorus_high"
+      }
+    },
+    {
+      "id": "alt",
+      "label": "ALT",
+      "category": "Chemistry",
+      "unit": "U/L",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "alt_high"
+      }
+    },
+    {
+      "id": "alp",
+      "label": "ALP",
+      "category": "Chemistry",
+      "unit": "U/L",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "alp_high"
+      }
+    },
+    {
+      "id": "bilirubin",
+      "label": "Total bilirubin",
+      "category": "Chemistry",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "bilirubin_high"
+      }
+    },
+    {
+      "id": "albumin",
+      "label": "Albumin",
+      "category": "Chemistry",
+      "unit": "g/dL",
+      "kind": "numeric",
+      "modelMap": {
+        "low": "albumin_low"
+      }
+    },
+    {
+      "id": "potassium",
+      "label": "Potassium",
+      "category": "Chemistry",
+      "unit": "mmol/L",
+      "kind": "numeric",
+      "modelMap": {
+        "low": "potassium_low",
+        "high": "potassium_high"
+      }
+    },
+    {
+      "id": "calcium",
+      "label": "Calcium",
+      "category": "Chemistry",
+      "unit": "mg/dL",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "calcium_high"
+      }
+    },
+    {
+      "id": "pcv",
+      "label": "PCV / hematocrit",
+      "category": "Hematology",
+      "unit": "%",
+      "kind": "numeric",
+      "modelMap": {
+        "low": "pcv_low"
+      }
+    },
+    {
+      "id": "wbc",
+      "label": "White blood cell count",
+      "category": "Hematology",
+      "unit": "K/µL",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "wbc_high"
+      }
+    },
+    {
+      "id": "total_t4",
+      "label": "Total T4",
+      "category": "Endocrine",
+      "unit": "µg/dL",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "total_t4_high"
+      }
+    },
+    {
+      "id": "urine_specific_gravity",
+      "label": "Urine specific gravity",
+      "category": "Urinalysis",
+      "unit": "",
+      "kind": "numeric",
+      "modelMap": {
+        "low": "urine_specific_gravity_low"
+      }
+    },
+    {
+      "id": "urine_glucose",
+      "label": "Urine glucose",
+      "category": "Urinalysis",
+      "unit": "",
+      "kind": "categorical",
+      "choices": [
+        "negative",
+        "trace",
+        "positive"
+      ],
+      "modelMap": {
+        "trace": "urine_glucose_positive",
+        "positive": "urine_glucose_positive"
+      }
+    },
+    {
+      "id": "urine_ketones",
+      "label": "Urine ketones",
+      "category": "Urinalysis",
+      "unit": "",
+      "kind": "categorical",
+      "choices": [
+        "negative",
+        "trace",
+        "positive"
+      ],
+      "modelMap": {
+        "trace": "urine_ketones_positive",
+        "positive": "urine_ketones_positive"
+      }
+    },
+    {
+      "id": "urine_protein_upc",
+      "label": "Urine protein / UPC",
+      "category": "Urinalysis",
+      "unit": "",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "urine_protein_positive",
+        "positive": "urine_protein_positive"
+      }
+    },
+    {
+      "id": "urine_culture",
+      "label": "Urine culture",
+      "category": "Urinalysis",
+      "unit": "",
+      "kind": "categorical",
+      "choices": [
+        "negative",
+        "positive"
+      ],
+      "modelMap": {
+        "positive": "urine_culture_positive"
+      }
+    },
+    {
+      "id": "fpl",
+      "label": "Feline pancreatic lipase (fPL)",
+      "category": "Specialized",
+      "unit": "",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "fpl_high",
+        "positive": "fpl_high"
+      }
+    },
+    {
+      "id": "ntprobnp",
+      "label": "NT-proBNP",
+      "category": "Specialized",
+      "unit": "",
+      "kind": "numeric",
+      "modelMap": {
+        "high": "ntprobnp_high",
+        "positive": "ntprobnp_high"
+      }
+    },
+    {
+      "id": "felv_test",
+      "label": "FeLV test",
+      "category": "Infectious testing",
+      "unit": "",
+      "kind": "categorical",
+      "choices": [
+        "negative",
+        "positive"
+      ],
+      "modelMap": {
+        "positive": "felv_positive"
+      }
+    },
+    {
+      "id": "fiv_test",
+      "label": "FIV test",
+      "category": "Infectious testing",
+      "unit": "",
+      "kind": "categorical",
+      "choices": [
+        "negative",
+        "positive"
+      ],
+      "modelMap": {
+        "positive": "fiv_positive"
+      }
+    },
+    {
+      "id": "fecal_parasites",
+      "label": "Fecal parasite test",
+      "category": "Infectious testing",
+      "unit": "",
+      "kind": "categorical",
+      "choices": [
+        "negative",
+        "positive"
+      ],
+      "modelMap": {
+        "positive": "fecal_parasites_positive"
+      }
+    },
+    {
+      "id": "custom",
+      "label": "Custom measurement / test",
+      "category": "Other",
+      "unit": "",
+      "kind": "custom",
+      "modelMap": {}
+    }
+  ],
+  "likelihoods": {
+    "acute_gastroenteritis": {
+      "acute_onset": 0.74,
+      "vomit_repeated": 0.74,
+      "stool_diarrhea": 0.74,
+      "appetite_reduced": 0.74,
+      "energy_low": 0.62,
+      "dehydration": 0.62,
+      "abd_pain": 0.62
+    },
+    "dietary_intolerance": {
+      "food_change": 0.88,
+      "vomit_single": 0.62,
+      "vomit_repeated": 0.62,
+      "stool_diarrhea": 0.74,
+      "stool_mucus": 0.62,
+      "appetite_reduced": 0.62
+    },
+    "gi_foreign_body": {
+      "foreign_object_possible": 0.88,
+      "vomit_repeated": 0.88,
+      "appetite_absent": 0.74,
+      "stool_none": 0.74,
+      "abd_pain": 0.74,
+      "energy_low": 0.74,
+      "dehydration": 0.62,
+      "acute_onset": 0.74
+    },
+    "hairball_gi": {
+      "vomit_hairball": 0.88,
+      "vomit_single": 0.74,
+      "vomit_repeated": 0.62,
+      "appetite_reduced": 0.62,
+      "stool_normal": 0.62
+    },
+    "ibd_chronic_enteropathy": {
+      "chronic_course": 0.88,
+      "vomit_repeated": 0.74,
+      "stool_diarrhea": 0.74,
+      "weight_loss": 0.74,
+      "appetite_reduced": 0.62,
+      "stool_blood": 0.62,
+      "energy_low": 0.62,
+      "albumin_low": 0.62
+    },
+    "gi_lymphoma": {
+      "chronic_course": 0.88,
+      "weight_loss": 0.88,
+      "appetite_reduced": 0.74,
+      "vomit_repeated": 0.74,
+      "stool_diarrhea": 0.74,
+      "energy_low": 0.74,
+      "abd_distended": 0.62,
+      "enlarged_nodes": 0.62,
+      "pcv_low": 0.62,
+      "albumin_low": 0.62
+    },
+    "intestinal_parasites": {
+      "stool_diarrhea": 0.74,
+      "weight_loss": 0.74,
+      "abd_distended": 0.62,
+      "vomit_single": 0.62,
+      "poor_coat": 0.62,
+      "new_cat_exposure": 0.62,
+      "fecal_parasites_positive": 0.88,
+      "pcv_low": 0.62
+    },
+    "constipation": {
+      "stool_hard_dry": 0.88,
+      "stool_none": 0.88,
+      "stool_straining": 0.88,
+      "appetite_reduced": 0.62,
+      "vomit_single": 0.62,
+      "abd_pain": 0.62
+    },
+    "megacolon": {
+      "chronic_course": 0.88,
+      "stool_none": 0.88,
+      "stool_straining": 0.88,
+      "stool_hard_dry": 0.88,
+      "abd_distended": 0.74,
+      "appetite_reduced": 0.74,
+      "vomit_repeated": 0.62,
+      "weight_loss": 0.62
+    },
+    "colitis": {
+      "stool_diarrhea": 0.74,
+      "stool_mucus": 0.88,
+      "stool_blood": 0.74,
+      "stool_frequent": 0.88,
+      "stool_straining": 0.74,
+      "appetite_normal": 0.62
+    },
+    "gi_ulcer_bleeding": {
+      "stool_black": 0.88,
+      "vomit_blood": 0.88,
+      "appetite_reduced": 0.74,
+      "pale_gums": 0.62,
+      "weakness": 0.62,
+      "abd_pain": 0.62,
+      "pcv_low": 0.74,
+      "bun_high": 0.62
+    },
+    "exocrine_pancreatic_insufficiency": {
+      "weight_loss": 0.88,
+      "appetite_increased": 0.74,
+      "stool_diarrhea": 0.74,
+      "stool_frequent": 0.62,
+      "poor_coat": 0.62,
+      "chronic_course": 0.74
+    },
+    "pancreatitis": {
+      "appetite_reduced": 0.88,
+      "energy_low": 0.74,
+      "vomit_repeated": 0.62,
+      "weight_loss": 0.62,
+      "abd_pain": 0.62,
+      "dehydration": 0.62,
+      "fpl_high": 0.88
+    },
+    "triaditis": {
+      "appetite_reduced": 0.88,
+      "vomit_repeated": 0.74,
+      "stool_diarrhea": 0.74,
+      "weight_loss": 0.74,
+      "yellow_gums": 0.62,
+      "abd_pain": 0.62,
+      "energy_low": 0.74,
+      "chronic_course": 0.62,
+      "fpl_high": 0.74,
+      "alt_high": 0.62,
+      "bilirubin_high": 0.62
+    },
+    "cholangitis": {
+      "fever_high": 0.74,
+      "energy_low": 0.74,
+      "dehydration": 0.62,
+      "appetite_reduced": 0.88,
+      "vomit_repeated": 0.74,
+      "yellow_gums": 0.74,
+      "abd_pain": 0.62,
+      "alt_high": 0.74,
+      "alp_high": 0.74,
+      "bilirubin_high": 0.74,
+      "wbc_high": 0.62
+    },
+    "hepatic_lipidosis": {
+      "anorexia_2d": 0.88,
+      "appetite_absent": 0.88,
+      "weight_loss": 0.88,
+      "yellow_gums": 0.74,
+      "energy_low": 0.74,
+      "vomit_repeated": 0.62,
+      "drooling": 0.62,
+      "dehydration": 0.62,
+      "neck_ventroflexion": 0.62,
+      "alt_high": 0.74,
+      "alp_high": 0.74,
+      "bilirubin_high": 0.88
+    },
+    "chronic_hepatopathy": {
+      "chronic_course": 0.74,
+      "appetite_reduced": 0.74,
+      "weight_loss": 0.74,
+      "energy_low": 0.74,
+      "yellow_gums": 0.62,
+      "vomit_repeated": 0.62,
+      "abd_distended": 0.62,
+      "alt_high": 0.74,
+      "alp_high": 0.62,
+      "bilirubin_high": 0.74,
+      "albumin_low": 0.74
+    },
+    "biliary_obstruction": {
+      "yellow_gums": 0.88,
+      "appetite_reduced": 0.74,
+      "vomit_repeated": 0.62,
+      "abd_pain": 0.74,
+      "energy_low": 0.74,
+      "acute_onset": 0.62,
+      "alp_high": 0.74,
+      "bilirubin_high": 0.88
+    },
+    "chronic_kidney_disease": {
+      "chronic_course": 0.74,
+      "thirst_increased": 0.88,
+      "urine_increased": 0.88,
+      "weight_loss": 0.74,
+      "appetite_reduced": 0.74,
+      "energy_low": 0.74,
+      "vomit_repeated": 0.62,
+      "dehydration": 0.62,
+      "bad_breath": 0.62,
+      "creatinine_high": 0.88,
+      "bun_high": 0.74,
+      "sdma_high": 0.88,
+      "phosphorus_high": 0.74,
+      "urine_specific_gravity_low": 0.74,
+      "urine_protein_positive": 0.74,
+      "pcv_low": 0.62,
+      "potassium_low": 0.62,
+      "blood_pressure_high": 0.62,
+      "creatinine_rising": 0.84,
+      "sdma_rising": 0.84
+    },
+    "acute_kidney_injury": {
+      "acute_onset": 0.74,
+      "appetite_absent": 0.74,
+      "energy_low": 0.88,
+      "vomit_repeated": 0.74,
+      "dehydration": 0.74,
+      "urine_reduced": 0.74,
+      "urine_none": 0.62,
+      "urine_increased": 0.62,
+      "mouth_ulcers": 0.62,
+      "creatinine_high": 0.88,
+      "bun_high": 0.88,
+      "sdma_high": 0.74,
+      "phosphorus_high": 0.74,
+      "potassium_high": 0.74,
+      "creatinine_rising": 0.74,
+      "sdma_rising": 0.68
+    },
+    "pyelonephritis": {
+      "fever_high": 0.74,
+      "energy_low": 0.74,
+      "appetite_reduced": 0.74,
+      "thirst_increased": 0.62,
+      "urine_increased": 0.62,
+      "urine_blood": 0.62,
+      "abd_pain": 0.62,
+      "creatinine_high": 0.62,
+      "wbc_high": 0.74,
+      "urine_culture_positive": 0.74,
+      "urine_protein_positive": 0.62
+    },
+    "bacterial_uti": {
+      "urine_small_frequent": 0.88,
+      "urine_straining": 0.74,
+      "urine_blood": 0.74,
+      "urine_outside_box": 0.74,
+      "genital_licking": 0.62,
+      "fever_high": 0.62,
+      "urine_culture_positive": 0.88,
+      "wbc_high": 0.62,
+      "urine_protein_positive": 0.62
+    },
+    "feline_idiopathic_cystitis": {
+      "urine_small_frequent": 0.88,
+      "urine_straining": 0.88,
+      "urine_blood": 0.74,
+      "urine_outside_box": 0.74,
+      "genital_licking": 0.74,
+      "stress_event": 0.74
+    },
+    "urolithiasis": {
+      "urine_small_frequent": 0.74,
+      "urine_straining": 0.88,
+      "urine_blood": 0.88,
+      "urine_outside_box": 0.62,
+      "pain_severe": 0.62
+    },
+    "urethral_obstruction": {
+      "urine_none": 0.88,
+      "urine_straining": 0.88,
+      "vocalization": 0.74,
+      "pain_severe": 0.74,
+      "vomit_repeated": 0.62,
+      "energy_low": 0.74,
+      "collapse": 0.62,
+      "acute_onset": 0.88,
+      "creatinine_high": 0.74,
+      "bun_high": 0.74,
+      "potassium_high": 0.88
+    },
+    "renal_neoplasia": {
+      "weight_loss": 0.74,
+      "appetite_reduced": 0.74,
+      "energy_low": 0.74,
+      "thirst_increased": 0.62,
+      "urine_increased": 0.62,
+      "abd_distended": 0.62,
+      "chronic_course": 0.74,
+      "creatinine_high": 0.74,
+      "sdma_high": 0.62,
+      "pcv_low": 0.62,
+      "creatinine_rising": 0.62,
+      "sdma_rising": 0.58
+    },
+    "diabetes_mellitus": {
+      "thirst_increased": 0.88,
+      "urine_increased": 0.88,
+      "weight_loss": 0.88,
+      "appetite_increased": 0.74,
+      "weakness": 0.62,
+      "hindlimb_weakness": 0.62,
+      "dehydration": 0.62,
+      "blood_glucose_high": 0.88,
+      "fructosamine_high": 0.88,
+      "urine_glucose_positive": 0.88,
+      "chronic_course": 0.88,
+      "appetite_reduced": 0.58,
+      "energy_low": 0.62
+    },
+    "diabetic_ketoacidosis": {
+      "thirst_increased": 0.74,
+      "urine_increased": 0.74,
+      "weight_loss": 0.74,
+      "appetite_absent": 0.88,
+      "vomit_repeated": 0.88,
+      "energy_low": 0.88,
+      "dehydration": 0.88,
+      "weakness": 0.74,
+      "acute_onset": 0.74,
+      "blood_glucose_high": 0.88,
+      "fructosamine_high": 0.74,
+      "urine_glucose_positive": 0.88,
+      "urine_ketones_positive": 0.88,
+      "potassium_low": 0.62
+    },
+    "hyperthyroidism": {
+      "weight_loss": 0.88,
+      "appetite_increased": 0.88,
+      "thirst_increased": 0.74,
+      "urine_increased": 0.74,
+      "energy_increased": 0.74,
+      "restless": 0.62,
+      "vomit_repeated": 0.62,
+      "stool_diarrhea": 0.62,
+      "poor_coat": 0.62,
+      "total_t4_high": 0.88,
+      "alt_high": 0.62,
+      "alp_high": 0.62,
+      "blood_pressure_high": 0.62
+    },
+    "hypersomatotropism": {
+      "thirst_increased": 0.74,
+      "urine_increased": 0.74,
+      "appetite_increased": 0.74,
+      "weight_gain": 0.62,
+      "weakness": 0.62,
+      "chronic_course": 0.74,
+      "blood_glucose_high": 0.74,
+      "fructosamine_high": 0.74
+    },
+    "hyperaldosteronism": {
+      "weakness": 0.88,
+      "neck_ventroflexion": 0.74,
+      "thirst_increased": 0.62,
+      "urine_increased": 0.62,
+      "sudden_blindness": 0.62,
+      "chronic_course": 0.62,
+      "potassium_low": 0.88,
+      "blood_pressure_high": 0.74
+    },
+    "hypercalcemia": {
+      "appetite_reduced": 0.74,
+      "vomit_repeated": 0.62,
+      "stool_hard_dry": 0.62,
+      "thirst_increased": 0.74,
+      "urine_increased": 0.74,
+      "weakness": 0.62,
+      "weight_loss": 0.62,
+      "calcium_high": 0.88
+    },
+    "hypokalemia": {
+      "weakness": 0.88,
+      "neck_ventroflexion": 0.88,
+      "appetite_reduced": 0.62,
+      "energy_low": 0.74,
+      "stiffness": 0.62,
+      "potassium_low": 0.88
+    },
+    "hypertrophic_cardiomyopathy": {
+      "resp_rapid": 0.74,
+      "resp_distress": 0.74,
+      "open_mouth_breathing": 0.62,
+      "energy_low": 0.62,
+      "appetite_reduced": 0.62,
+      "collapse": 0.62,
+      "hindlimb_paralysis": 0.62,
+      "ntprobnp_high": 0.74
+    },
+    "congestive_heart_failure": {
+      "resp_rapid": 0.88,
+      "resp_distress": 0.88,
+      "open_mouth_breathing": 0.74,
+      "energy_low": 0.74,
+      "appetite_reduced": 0.62,
+      "blue_gums": 0.62,
+      "collapse": 0.62,
+      "ntprobnp_high": 0.88
+    },
+    "arterial_thromboembolism": {
+      "acute_onset": 0.88,
+      "hindlimb_paralysis": 0.88,
+      "cold_painful_hindfeet": 0.88,
+      "pain_severe": 0.88,
+      "vocalization": 0.74,
+      "resp_rapid": 0.62
+    },
+    "systemic_hypertension": {
+      "sudden_blindness": 0.88,
+      "confusion": 0.62,
+      "seizure": 0.62,
+      "restless": 0.62,
+      "thirst_increased": 0.62,
+      "urine_increased": 0.62,
+      "blood_pressure_high": 0.88
+    },
+    "arrhythmia": {
+      "weakness": 0.74,
+      "collapse": 0.74,
+      "energy_low": 0.74,
+      "resp_rapid": 0.62,
+      "acute_onset": 0.62
+    },
+    "feline_asthma": {
+      "cough": 0.88,
+      "wheeze": 0.88,
+      "resp_rapid": 0.74,
+      "resp_distress": 0.74,
+      "open_mouth_breathing": 0.62
+    },
+    "upper_respiratory_infection": {
+      "sneeze": 0.88,
+      "nasal_discharge": 0.88,
+      "ocular_discharge": 0.74,
+      "appetite_reduced": 0.62,
+      "fever_high": 0.62,
+      "energy_low": 0.62
+    },
+    "pneumonia": {
+      "fever_high": 0.74,
+      "cough": 0.74,
+      "resp_rapid": 0.88,
+      "resp_distress": 0.88,
+      "energy_low": 0.74,
+      "appetite_reduced": 0.74,
+      "blue_gums": 0.62,
+      "wbc_high": 0.74
+    },
+    "pleural_effusion": {
+      "resp_rapid": 0.88,
+      "resp_distress": 0.88,
+      "open_mouth_breathing": 0.74,
+      "energy_low": 0.74,
+      "blue_gums": 0.62,
+      "abd_distended": 0.62
+    },
+    "pulmonary_edema": {
+      "resp_rapid": 0.88,
+      "resp_distress": 0.88,
+      "open_mouth_breathing": 0.74,
+      "blue_gums": 0.62,
+      "energy_low": 0.74
+    },
+    "lungworm": {
+      "cough": 0.74,
+      "wheeze": 0.74,
+      "resp_rapid": 0.74,
+      "resp_distress": 0.62,
+      "weight_loss": 0.62
+    },
+    "nasal_neoplasia": {
+      "chronic_course": 0.88,
+      "sneeze": 0.74,
+      "nasal_discharge": 0.74,
+      "nasal_blood": 0.88,
+      "appetite_reduced": 0.62,
+      "weight_loss": 0.62
+    },
+    "heartworm_respiratory_disease": {
+      "cough": 0.74,
+      "wheeze": 0.62,
+      "resp_rapid": 0.74,
+      "resp_distress": 0.74,
+      "vomit_single": 0.62,
+      "collapse": 0.62
+    },
+    "fip": {
+      "fever_high": 0.88,
+      "appetite_reduced": 0.74,
+      "weight_loss": 0.88,
+      "energy_low": 0.88,
+      "abd_distended": 0.74,
+      "resp_distress": 0.62,
+      "seizure": 0.62,
+      "ataxia": 0.62,
+      "ocular_discharge": 0.62,
+      "chronic_course": 0.74
+    },
+    "felv_related": {
+      "appetite_reduced": 0.74,
+      "weight_loss": 0.88,
+      "poor_coat": 0.74,
+      "enlarged_nodes": 0.74,
+      "fever_high": 0.74,
+      "pale_gums": 0.74,
+      "mouth_ulcers": 0.62,
+      "stool_diarrhea": 0.62,
+      "recurrent_infections": 0.88,
+      "seizure": 0.62
+    },
+    "fiv_related": {
+      "weight_loss": 0.74,
+      "fever_high": 0.62,
+      "appetite_reduced": 0.74,
+      "recurrent_infections": 0.88,
+      "bad_breath": 0.74,
+      "oral_pain": 0.74,
+      "mouth_ulcers": 0.74,
+      "seizure": 0.62,
+      "chronic_course": 0.74
+    },
+    "panleukopenia": {
+      "acute_onset": 0.88,
+      "fever_high": 0.88,
+      "stool_diarrhea": 0.88,
+      "vomit_repeated": 0.88,
+      "energy_low": 0.88,
+      "appetite_absent": 0.88,
+      "dehydration": 0.88,
+      "unvaccinated": 0.74
+    },
+    "toxoplasmosis": {
+      "fever_high": 0.74,
+      "stool_diarrhea": 0.62,
+      "cough": 0.62,
+      "resp_distress": 0.62,
+      "yellow_gums": 0.62,
+      "seizure": 0.74,
+      "ataxia": 0.74,
+      "eye_red_pain": 0.62,
+      "energy_low": 0.74
+    },
+    "abscess_cellulitis": {
+      "skin_swelling": 0.88,
+      "fever_high": 0.74,
+      "pain_severe": 0.62,
+      "energy_low": 0.74,
+      "appetite_reduced": 0.62,
+      "new_cat_exposure": 0.62
+    },
+    "sepsis": {
+      "fever_high": 0.74,
+      "temp_low": 0.74,
+      "energy_low": 0.88,
+      "appetite_absent": 0.74,
+      "weakness": 0.88,
+      "collapse": 0.74,
+      "resp_rapid": 0.74,
+      "dehydration": 0.74,
+      "acute_onset": 0.74
+    },
+    "cryptococcosis": {
+      "chronic_course": 0.74,
+      "nasal_discharge": 0.74,
+      "sneeze": 0.62,
+      "nasal_blood": 0.62,
+      "ataxia": 0.62,
+      "seizure": 0.62,
+      "eye_red_pain": 0.62,
+      "weight_loss": 0.62
+    },
+    "feline_calicivirus": {
+      "sneeze": 0.74,
+      "nasal_discharge": 0.74,
+      "ocular_discharge": 0.62,
+      "mouth_ulcers": 0.88,
+      "oral_pain": 0.74,
+      "fever_high": 0.62,
+      "appetite_reduced": 0.74
+    },
+    "feline_herpesvirus": {
+      "sneeze": 0.88,
+      "nasal_discharge": 0.88,
+      "ocular_discharge": 0.88,
+      "eye_red_pain": 0.74,
+      "fever_high": 0.62,
+      "appetite_reduced": 0.62
+    },
+    "anemia": {
+      "pale_gums": 0.88,
+      "energy_low": 0.74,
+      "weakness": 0.74,
+      "resp_rapid": 0.74,
+      "collapse": 0.62,
+      "appetite_reduced": 0.62
+    },
+    "hemolytic_anemia": {
+      "pale_gums": 0.88,
+      "yellow_gums": 0.74,
+      "urine_dark": 0.74,
+      "energy_low": 0.74,
+      "weakness": 0.74,
+      "resp_rapid": 0.74,
+      "fever_high": 0.62,
+      "pcv_low": 0.88,
+      "bilirubin_high": 0.74
+    },
+    "multicentric_lymphoma": {
+      "weight_loss": 0.88,
+      "appetite_reduced": 0.74,
+      "energy_low": 0.74,
+      "enlarged_nodes": 0.88,
+      "fever_high": 0.62,
+      "resp_distress": 0.62,
+      "thirst_increased": 0.62,
+      "urine_increased": 0.62,
+      "chronic_course": 0.74
+    },
+    "leukemia": {
+      "pale_gums": 0.74,
+      "energy_low": 0.74,
+      "weight_loss": 0.74,
+      "appetite_reduced": 0.74,
+      "fever_high": 0.62,
+      "recurrent_infections": 0.62,
+      "enlarged_nodes": 0.62,
+      "chronic_course": 0.74
+    },
+    "mast_cell_disease": {
+      "skin_lump": 0.74,
+      "vomit_repeated": 0.62,
+      "stool_black": 0.62,
+      "weight_loss": 0.62,
+      "appetite_reduced": 0.62,
+      "chronic_course": 0.62
+    },
+    "mammary_carcinoma": {
+      "mammary_lump": 0.88,
+      "weight_loss": 0.62,
+      "appetite_reduced": 0.62,
+      "energy_low": 0.62,
+      "chronic_course": 0.74
+    },
+    "oral_squamous_cell_carcinoma": {
+      "oral_mass": 0.88,
+      "drooling": 0.88,
+      "oral_pain": 0.88,
+      "bad_breath": 0.74,
+      "difficulty_swallowing": 0.74,
+      "weight_loss": 0.88,
+      "appetite_reduced": 0.74,
+      "chronic_course": 0.74
+    },
+    "multiple_myeloma": {
+      "weight_loss": 0.74,
+      "energy_low": 0.74,
+      "weakness": 0.62,
+      "appetite_reduced": 0.74,
+      "chronic_course": 0.74,
+      "pale_gums": 0.62
+    },
+    "seizure_disorder": {
+      "seizure": 0.88,
+      "chronic_course": 0.62,
+      "energy_normal": 0.62
+    },
+    "vestibular_disease": {
+      "head_tilt": 0.88,
+      "ataxia": 0.88,
+      "vomit_single": 0.62,
+      "acute_onset": 0.74
+    },
+    "intracranial_mass": {
+      "seizure": 0.74,
+      "confusion": 0.74,
+      "ataxia": 0.74,
+      "head_tilt": 0.62,
+      "sudden_blindness": 0.62,
+      "chronic_course": 0.88,
+      "weight_loss": 0.62
+    },
+    "encephalitis_meningitis": {
+      "fever_high": 0.74,
+      "seizure": 0.74,
+      "ataxia": 0.74,
+      "confusion": 0.74,
+      "energy_low": 0.74,
+      "acute_onset": 0.62
+    },
+    "cognitive_dysfunction": {
+      "confusion": 0.88,
+      "vocalization": 0.74,
+      "restless": 0.74,
+      "chronic_course": 0.88,
+      "grooming_reduced": 0.62
+    },
+    "spinal_neurologic_disease": {
+      "hindlimb_weakness": 0.74,
+      "hindlimb_paralysis": 0.74,
+      "ataxia": 0.74,
+      "pain_severe": 0.62,
+      "stiffness": 0.62
+    },
+    "thiamine_deficiency": {
+      "ataxia": 0.74,
+      "seizure": 0.74,
+      "weakness": 0.74,
+      "neck_ventroflexion": 0.62,
+      "appetite_reduced": 0.74,
+      "vomit_repeated": 0.62
+    },
+    "periodontal_disease": {
+      "bad_breath": 0.88,
+      "oral_pain": 0.74,
+      "appetite_reduced": 0.62,
+      "drooling": 0.62,
+      "pawing_mouth": 0.62
+    },
+    "gingivostomatitis": {
+      "oral_pain": 0.88,
+      "mouth_ulcers": 0.88,
+      "drooling": 0.74,
+      "bad_breath": 0.74,
+      "appetite_reduced": 0.74,
+      "weight_loss": 0.62,
+      "chronic_course": 0.74
+    },
+    "tooth_resorption": {
+      "oral_pain": 0.88,
+      "pawing_mouth": 0.74,
+      "appetite_reduced": 0.62,
+      "drooling": 0.62,
+      "bad_breath": 0.62
+    },
+    "oral_foreign_body": {
+      "acute_onset": 0.74,
+      "drooling": 0.88,
+      "pawing_mouth": 0.88,
+      "difficulty_swallowing": 0.74,
+      "oral_pain": 0.74,
+      "foreign_object_possible": 0.74
+    },
+    "osteoarthritis": {
+      "chronic_course": 0.74,
+      "stiffness": 0.88,
+      "reduced_jumping": 0.88,
+      "limping": 0.74,
+      "grooming_reduced": 0.62,
+      "hiding": 0.62
+    },
+    "trauma_fracture": {
+      "trauma": 0.88,
+      "acute_onset": 0.88,
+      "limping": 0.88,
+      "pain_severe": 0.74,
+      "collapse": 0.62,
+      "resp_rapid": 0.62
+    },
+    "soft_tissue_pain": {
+      "trauma": 0.74,
+      "limping": 0.74,
+      "pain_severe": 0.62,
+      "reduced_jumping": 0.74,
+      "stiffness": 0.62
+    },
+    "allergic_dermatitis": {
+      "itching": 0.88,
+      "grooming_increased": 0.74,
+      "hair_loss": 0.74,
+      "skin_scaling": 0.62,
+      "chronic_course": 0.62
+    },
+    "flea_allergy": {
+      "itching": 0.88,
+      "grooming_increased": 0.88,
+      "hair_loss": 0.74,
+      "skin_scaling": 0.62
+    },
+    "ringworm": {
+      "hair_loss": 0.88,
+      "skin_scaling": 0.88,
+      "itching": 0.62,
+      "new_cat_exposure": 0.62
+    },
+    "eosinophilic_granuloma": {
+      "skin_lump": 0.62,
+      "skin_scaling": 0.74,
+      "itching": 0.74,
+      "mouth_ulcers": 0.62,
+      "grooming_increased": 0.62
+    },
+    "general_toxin_exposure": {
+      "toxin_possible": 0.88,
+      "acute_onset": 0.88,
+      "vomit_repeated": 0.74,
+      "drooling": 0.74,
+      "tremor": 0.74,
+      "seizure": 0.62,
+      "collapse": 0.62,
+      "energy_low": 0.74
+    },
+    "lily_toxicity": {
+      "lily_exposure": 0.88,
+      "acute_onset": 0.74,
+      "vomit_repeated": 0.74,
+      "appetite_absent": 0.74,
+      "energy_low": 0.74,
+      "dehydration": 0.74,
+      "urine_reduced": 0.62,
+      "urine_none": 0.62,
+      "urine_increased": 0.62,
+      "creatinine_high": 0.74,
+      "bun_high": 0.74,
+      "phosphorus_high": 0.62,
+      "potassium_high": 0.62
+    },
+    "ethylene_glycol_toxicity": {
+      "antifreeze_possible": 0.88,
+      "acute_onset": 0.88,
+      "vomit_repeated": 0.74,
+      "ataxia": 0.74,
+      "energy_low": 0.74,
+      "dehydration": 0.74,
+      "urine_reduced": 0.74,
+      "urine_none": 0.62,
+      "creatinine_high": 0.74,
+      "bun_high": 0.74,
+      "potassium_high": 0.62
+    },
+    "acetaminophen_toxicity": {
+      "acetaminophen_possible": 0.88,
+      "acute_onset": 0.88,
+      "energy_low": 0.74,
+      "resp_distress": 0.74,
+      "blue_gums": 0.88,
+      "pale_gums": 0.62,
+      "yellow_gums": 0.62,
+      "collapse": 0.62
+    },
+    "permethrin_toxicity": {
+      "permethrin_possible": 0.88,
+      "acute_onset": 0.88,
+      "tremor": 0.88,
+      "seizure": 0.74,
+      "restless": 0.74,
+      "weakness": 0.74
+    },
+    "heatstroke": {
+      "fever_high": 0.88,
+      "open_mouth_breathing": 0.74,
+      "resp_rapid": 0.74,
+      "weakness": 0.74,
+      "collapse": 0.74,
+      "vomit_repeated": 0.62,
+      "acute_onset": 0.88
+    },
+    "pyometra": {
+      "intact_female": 0.88,
+      "energy_low": 0.74,
+      "appetite_reduced": 0.74,
+      "thirst_increased": 0.74,
+      "urine_increased": 0.74,
+      "vomit_repeated": 0.62,
+      "vaginal_discharge": 0.88,
+      "abd_distended": 0.74,
+      "fever_high": 0.62
+    },
+    "mastitis": {
+      "mammary_lump": 0.74,
+      "skin_swelling": 0.74,
+      "fever_high": 0.74,
+      "energy_low": 0.74,
+      "appetite_reduced": 0.62,
+      "pain_severe": 0.62
+    },
+    "glaucoma_uveitis": {
+      "eye_red_pain": 0.88,
+      "cloudy_eye": 0.74,
+      "sudden_blindness": 0.74,
+      "hiding": 0.62,
+      "appetite_reduced": 0.62
+    },
+    "retinal_detachment": {
+      "sudden_blindness": 0.88,
+      "acute_onset": 0.74,
+      "confusion": 0.62
+    },
+    "corneal_ulcer": {
+      "eye_red_pain": 0.88,
+      "ocular_discharge": 0.74,
+      "cloudy_eye": 0.62,
+      "pawing_mouth": 0.24
+    },
+    "stress_behavioral": {
+      "stress_event": 0.88,
+      "hiding": 0.74,
+      "appetite_reduced": 0.74,
+      "grooming_increased": 0.62,
+      "urine_outside_box": 0.62,
+      "energy_low": 0.62
+    },
+    "medication_adverse_effect": {
+      "medication_recent": 0.88,
+      "appetite_reduced": 0.62,
+      "vomit_single": 0.62,
+      "vomit_repeated": 0.62,
+      "stool_diarrhea": 0.62,
+      "energy_low": 0.62,
+      "restless": 0.62
+    },
+    "other_unmodeled": {}
+  },
+  "urgencyRules": [
+    {
+      "id": "breathing",
+      "level": "emergency",
+      "findings": [
+        "resp_distress",
+        "open_mouth_breathing",
+        "blue_gums"
+      ],
+      "match": "any",
+      "title": "Breathing difficulty",
+      "message": "Labored breathing, open-mouth breathing, or blue-gray mucous membranes warrants immediate veterinary assessment."
+    },
+    {
+      "id": "urinary_block",
+      "level": "emergency",
+      "findings": [
+        "urine_none"
+      ],
+      "match": "any",
+      "title": "Unable to urinate",
+      "message": "Inability to pass urine is an emergency."
+    },
+    {
+      "id": "collapse_seizure",
+      "level": "emergency",
+      "findings": [
+        "collapse",
+        "seizure"
+      ],
+      "match": "any",
+      "title": "Collapse or seizure",
+      "message": "Collapse, unresponsiveness, or seizure activity warrants emergency veterinary care."
+    },
+    {
+      "id": "thromboembolism",
+      "level": "emergency",
+      "findings": [
+        "hindlimb_paralysis",
+        "cold_painful_hindfeet"
+      ],
+      "match": "any",
+      "title": "Sudden hind-limb paralysis / cold painful paws",
+      "message": "Sudden hind-limb paralysis or cold painful hind paws can represent a vascular emergency."
+    },
+    {
+      "id": "toxin",
+      "level": "emergency",
+      "findings": [
+        "toxin_possible",
+        "lily_exposure",
+        "antifreeze_possible",
+        "acetaminophen_possible",
+        "permethrin_possible"
+      ],
+      "match": "any",
+      "title": "Possible toxin exposure",
+      "message": "Known or suspected toxin exposure should be discussed with a veterinarian or animal poison service immediately."
+    },
+    {
+      "id": "blood_vomit_stool",
+      "level": "urgent",
+      "findings": [
+        "vomit_blood",
+        "stool_black"
+      ],
+      "match": "any",
+      "title": "Possible gastrointestinal bleeding",
+      "message": "Blood in vomit or black/tarry stool can require urgent veterinary assessment."
+    },
+    {
+      "id": "urinary_straining",
+      "level": "urgent",
+      "findings": [
+        "urine_straining"
+      ],
+      "match": "any",
+      "title": "Straining to urinate",
+      "message": "Repeated urinary straining can progress to or represent obstruction and warrants prompt veterinary assessment."
+    },
+    {
+      "id": "jaundice",
+      "level": "urgent",
+      "findings": [
+        "yellow_gums"
+      ],
+      "match": "any",
+      "title": "Jaundice observed",
+      "message": "Yellow discoloration of the gums, skin, or eyes warrants prompt veterinary assessment."
+    },
+    {
+      "id": "repeated_vomit_low_energy",
+      "level": "urgent",
+      "findings": [
+        "vomit_repeated",
+        "energy_low"
+      ],
+      "match": "all",
+      "title": "Repeated vomiting with lethargy",
+      "message": "Repeated vomiting together with lethargy can indicate significant illness and warrants prompt veterinary assessment."
+    },
+    {
+      "id": "severe_pain",
+      "level": "urgent",
+      "findings": [
+        "pain_severe"
+      ],
+      "match": "any",
+      "title": "Severe pain",
+      "message": "Severe or persistent pain warrants prompt veterinary assessment."
+    }
+  ],
+  "sources": [
+    {
+      "id": "cornell_urgent",
+      "name": "Cornell University College of Veterinary Medicine — Urgent Care",
+      "url": "https://www.vet.cornell.edu/hospitals/services/urgent-care",
+      "role": "Emergency red-flag examples"
+    },
+    {
+      "id": "cornell_hyperthyroidism",
+      "name": "Cornell Feline Health Center — Hyperthyroidism in Cats",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/hyperthyroidism-cats",
+      "role": "Hyperthyroidism clinical-sign pattern"
+    },
+    {
+      "id": "cornell_diabetes",
+      "name": "Cornell Feline Health Center — Feline Diabetes",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/feline-diabetes",
+      "role": "Diabetes clinical-sign pattern"
+    },
+    {
+      "id": "cornell_ckd",
+      "name": "Cornell Feline Health Center — Chronic Kidney Disease",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/chronic-kidney-disease",
+      "role": "CKD clinical-sign pattern"
+    },
+    {
+      "id": "cornell_pancreatitis",
+      "name": "Cornell Feline Health Center — Feline Pancreatitis",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/feline-pancreatitis",
+      "role": "Pancreatitis clinical-sign pattern"
+    },
+    {
+      "id": "cornell_flutd",
+      "name": "Cornell Feline Health Center — Feline Lower Urinary Tract Disease",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/feline-lower-urinary-tract-disease",
+      "role": "Lower urinary tract and obstruction signs"
+    },
+    {
+      "id": "cornell_hcm",
+      "name": "Cornell Feline Health Center — Hypertrophic Cardiomyopathy",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/hypertrophic-cardiomyopathy",
+      "role": "HCM, heart failure, and thromboembolism signs"
+    },
+    {
+      "id": "cornell_asthma",
+      "name": "Cornell Feline Health Center — Feline Asthma",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/feline-asthma-what-you-need-know",
+      "role": "Asthma clinical-sign pattern"
+    },
+    {
+      "id": "cornell_fip",
+      "name": "Cornell Feline Health Center — Feline Infectious Peritonitis",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/feline-infectious-peritonitis",
+      "role": "FIP clinical-sign pattern"
+    },
+    {
+      "id": "cornell_ibd",
+      "name": "Cornell Feline Health Center — Inflammatory Bowel Disease",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/inflammatory-bowel-disease",
+      "role": "Chronic enteropathy / IBD signs"
+    },
+    {
+      "id": "cornell_felv",
+      "name": "Cornell Feline Health Center — Feline Leukemia Virus",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/feline-leukemia-virus",
+      "role": "FeLV-associated disease signs"
+    },
+    {
+      "id": "cornell_fiv",
+      "name": "Cornell Feline Health Center — Feline Immunodeficiency Virus",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/feline-immunodeficiency-virus",
+      "role": "FIV-associated disease signs"
+    },
+    {
+      "id": "cornell_panleukopenia",
+      "name": "Cornell Feline Health Center — Feline Panleukopenia Virus",
+      "url": "https://www.vet.cornell.edu/departments-centers-and-institutes/cornell-feline-health-center/health-information/feline-health-topics/feline-panleukopenia-virus",
+      "role": "Panleukopenia clinical-sign pattern"
+    },
+    {
+      "id": "merck_hepatic_lipidosis",
+      "name": "Merck Veterinary Manual — Feline Hepatic Lipidosis",
+      "url": "https://www.merckvetmanual.com/digestive-system/hepatic-diseases-of-small-animals/feline-hepatic-lipidosis",
+      "role": "Hepatic lipidosis clinical signs"
+    },
+    {
+      "id": "merck_cholangitis",
+      "name": "Merck Veterinary Manual — Feline Cholangitis / Cholangiohepatitis Syndrome",
+      "url": "https://www.merckvetmanual.com/digestive-system/hepatic-diseases-of-small-animals/feline-cholangitis-cholangiohepatitis-syndrome",
+      "role": "Cholangitis clinical signs"
+    },
+    {
+      "id": "merck_constipation",
+      "name": "Merck Veterinary Manual — Constipation, Obstipation, and Megacolon",
+      "url": "https://www.merckvetmanual.com/digestive-system/diseases-of-the-large-intestine-in-small-animals/constipation-obstipation-and-megacolon-in-small-animals",
+      "role": "Constipation/obstipation clinical signs"
+    },
+    {
+      "id": "merck_megacolon",
+      "name": "Merck Veterinary Manual — Megacolon in Cats",
+      "url": "https://www.merckvetmanual.com/digestive-system/surgical-problems-of-the-gastrointestinal-tract-in-small-animals/megacolon-in-cats",
+      "role": "Megacolon clinical signs"
+    },
+    {
+      "id": "merck_gi_cancer",
+      "name": "Merck Veterinary Manual — Disorders of the Stomach and Intestines in Cats",
+      "url": "https://www.merckvetmanual.com/cat-owners/digestive-disorders-of-cats/disorders-of-the-stomach-and-intestines-in-cats",
+      "role": "GI neoplasia clinical signs"
+    },
+    {
+      "id": "merck_lymphoma",
+      "name": "Merck Veterinary Manual — Immune System Tumors in Cats",
+      "url": "https://www.merckvetmanual.com/cat-owners/immune-disorders-of-cats/immune-system-tumors-in-cats",
+      "role": "Lymphoma clinical signs"
+    },
+    {
+      "id": "merck_pyometra",
+      "name": "Merck Veterinary Manual — Reproductive Disorders of Female Cats",
+      "url": "https://www.merckvetmanual.com/cat-owners/reproductive-disorders-of-cats/reproductive-disorders-of-female-cats",
+      "role": "Pyometra clinical signs"
+    },
+    {
+      "id": "merck_aki",
+      "name": "Merck Veterinary Manual — Renal Dysfunction in Small Animals",
+      "url": "https://www.merckvetmanual.com/urinary-system/noninfectious-diseases-of-the-urinary-system-in-small-animals/renal-dysfunction-in-small-animals",
+      "role": "Acute kidney injury clinical signs"
+    },
+    {
+      "id": "merck_toxoplasmosis",
+      "name": "Merck Veterinary Manual — Toxoplasmosis in Cats",
+      "url": "https://www.merckvetmanual.com/cat-owners/disorders-affecting-multiple-body-systems-of-cats/toxoplasmosis-in-cats",
+      "role": "Toxoplasmosis clinical signs"
+    },
+    {
+      "id": "merck_common_labs",
+      "name": "Merck Veterinary Manual — Common Laboratory Tests in Veterinary Medicine",
+      "url": "https://www.merckvetmanual.com/special-pet-topics/diagnostic-tests-and-imaging/common-laboratory-tests-in-veterinary-medicine",
+      "role": "General interpretation context for chemistry, CBC, and urinalysis measurements"
+    },
+    {
+      "id": "merck_clinical_biochem",
+      "name": "Merck Veterinary Manual — Clinical Biochemistry",
+      "url": "https://www.merckvetmanual.com/clinical-pathology-and-procedures/diagnostic-procedures-for-the-private-practice-laboratory/clinical-biochemistry",
+      "role": "Clinical chemistry interpretation context"
+    },
+    {
+      "id": "iris_ckd",
+      "name": "International Renal Interest Society — IRIS Staging System",
+      "url": "https://www.iris-kidney.com/iris-staging-system",
+      "role": "Renal biomarkers, proteinuria, and blood-pressure context"
+    },
+    {
+      "id": "cornell_thyroid_tests",
+      "name": "Cornell Animal Health Diagnostic Center — Feline Thyroid Tests",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/testing/testing-protocols-interpretations/feline-thyroid-tests",
+      "role": "Feline thyroid-test interpretation context"
+    },
+    {
+      "id": "merck_diabetes",
+      "name": "Merck Veterinary Manual — Diabetes Mellitus in Dogs and Cats",
+      "url": "https://www.merckvetmanual.com/endocrine-system/the-pancreas/diabetes-mellitus-in-dogs-and-cats",
+      "role": "Feline diabetes chronic course, appetite variability, polyuria/polydipsia, and glucose-threshold context"
+    },
+    {
+      "id": "aaha_aafp_lifestage",
+      "name": "2021 AAHA/AAFP Feline Life Stage Guidelines — Medical History and Physical Examination Focus",
+      "url": "https://www.aaha.org/resources/2021-aaha-aafp-feline-life-stage-guidelines/pe-and-history-focus/",
+      "role": "Supports retaining previous medical/surgical history, medications/supplements, diet, body weight/condition and longitudinal trend information across feline life stages"
+    },
+    {
+      "id": "merck_renal_dysfunction",
+      "name": "Merck Veterinary Manual — Renal Dysfunction in Dogs and Cats",
+      "url": "https://www.merckvetmanual.com/urinary-system/noninfectious-diseases-of-the-urinary-system-in-small-animals/renal-dysfunction-in-small-animals",
+      "role": "Supports serial creatinine/SDMA trend interpretation and the use of repeated renal laboratory evaluation in CKD assessment"
+    }
+  ],
+  "inferenceConfig": {
+    "ownerEvidenceBaseWeight": 1.0,
+    "clinicalEvidenceBaseWeight": 1.35,
+    "linkedHistoryWeight": 0.38,
+    "historicalStateWeight": 0.28,
+    "negativeCheckBaseWeight": 0.6,
+    "maxTemporalWeight": 1.65,
+    "maxClinicalMagnitudeWeight": 1.85,
+    "diagnosisModifiers": {
+      "confirmed_active": 4.0,
+      "probable_active": 2.2,
+      "suspected_active": 1.35,
+      "confirmed_resolved": 1.15,
+      "ruled_out": 0.25
+    },
+    "maxSerialClinicalWeight": 2.3,
+    "resolutionBaseWeight": 0.82,
+    "correlationGroupFactors": [
+      1.0,
+      0.68,
+      0.45,
+      0.3,
+      0.22
+    ],
+    "trendEvidenceBaseWeight": 0.82,
+    "trendMinPoints": 3,
+    "trendMinSpanDays": 7,
+    "trendMinRelativeChange": 0.05,
+    "trendMinR2": 0.45
+  },
+  "riskModifiers": {
+    "chronic_kidney_disease": [
+      {
+        "kind": "age_years",
+        "op": "gte",
+        "value": 10,
+        "factor": 1.8,
+        "sourceRef": "cornell_ckd",
+        "note": "CKD is highly prevalent in cats over 10."
+      },
+      {
+        "kind": "age_years",
+        "op": "lt",
+        "value": 5,
+        "factor": 0.55,
+        "sourceRef": "cornell_ckd",
+        "note": "Young age lowers, but does not eliminate, CKD consistency."
+      }
+    ],
+    "diabetes_mellitus": [
+      {
+        "kind": "sex",
+        "op": "eq",
+        "value": "male",
+        "factor": 1.18,
+        "sourceRef": "cornell_diabetes",
+        "note": "Male sex is a reported risk factor."
+      },
+      {
+        "kind": "age_years",
+        "op": "gte",
+        "value": 10,
+        "factor": 1.35,
+        "sourceRef": "cornell_diabetes",
+        "note": "Increasing age is a reported risk factor."
+      },
+      {
+        "kind": "age_years",
+        "op": "lt",
+        "value": 5,
+        "factor": 0.82,
+        "sourceRef": "cornell_diabetes",
+        "note": "Younger age modestly lowers consistency because risk increases with age."
+      }
+    ],
+    "hyperthyroidism": [
+      {
+        "kind": "age_years",
+        "op": "gte",
+        "value": 10,
+        "factor": 1.65,
+        "sourceRef": "cornell_hyperthyroidism",
+        "note": "Hyperthyroidism occurs mainly in middle-aged to older cats."
+      },
+      {
+        "kind": "age_years",
+        "op": "lt",
+        "value": 7,
+        "factor": 0.45,
+        "sourceRef": "cornell_hyperthyroidism",
+        "note": "Young age substantially lowers consistency."
+      }
+    ],
+    "feline_idiopathic_cystitis": [
+      {
+        "kind": "sex",
+        "op": "eq",
+        "value": "male",
+        "factor": 1.12,
+        "sourceRef": "cornell_flutd",
+        "note": "Male cats may be at increased lower-urinary-tract risk."
+      }
+    ],
+    "urethral_obstruction": [
+      {
+        "kind": "sex",
+        "op": "eq",
+        "value": "male",
+        "factor": 1.35,
+        "sourceRef": "cornell_flutd",
+        "note": "Male anatomy materially increases obstruction risk."
+      }
+    ]
+  },
+  "monitoringConfig": {
+    "policy": "Monitoring cadence is an application data-quality heuristic. It prioritizes when a recorded state may be worth updating; it is not a veterinary follow-up interval or medical recommendation.",
+    "stateRecheckHours": 24,
+    "eventRecheckHours": 48,
+    "absenceRecheckHours": 72,
+    "baselineStateMultiplier": 3.0,
+    "cadenceFactors": {
+      "intensive": 0.5,
+      "standard": 1.0,
+      "sparse": 3.0
+    },
+    "confidenceCadenceFactors": {
+      "low": 0.55,
+      "medium": 0.78,
+      "high": 1.0
+    },
+    "severityCadenceFactors": {
+      "low": 1.25,
+      "medium": 1.0,
+      "high": 0.7
+    },
+    "monitoringVirtualWeight": 0.45,
+    "maxOverduePriorityFactor": 3.0,
+    "queueLimit": 12,
+    "newQuestionLimit": 6
+  }
+}
