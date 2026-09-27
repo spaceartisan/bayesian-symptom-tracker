@@ -140,3 +140,10 @@ const cohort=run(`validationCohort()`);assert(cohort.metrics.n===1&&cohort.evalu
 assert(run(`validationCsv()`).includes('model_only_rank')&&run(`validationCsv()`).includes('combined_rank'),'validation CSV export contains separate model-only and combined rank metrics');
 const validationHtml=run(`renderValidationPage()`);assert(validationHtml.includes('BLINDED CASE LIBRARY')&&validationHtml.includes('combined top-5')&&validationHtml.includes('model-only top-5')&&validationHtml.includes('ACTIVE CASE VALIDATION'),'validation workspace renders cohort and case detail');
 console.log('PASS v0.10 blinded cohort validation metrics, diagnosis/workup answer isolation');
+
+
+// v0.10.1 dashboard compact monitoring and temporal-integrity display.
+run(`state={...defaultState(),pets:[{id:'ui-p',name:'UI Cat',species:'cat',sex:'unknown',birthDate:'',weight:'',breed:'',neuterStatus:'unknown',bodyConditionScore:'',vetName:'',vetPhone:''}],episodes:[],observations:[],clinicalMeasurements:[],diets:[],diagnoses:[],treatments:[],studies:[],outcomes:[],workupEvents:[],settings:{...defaultState().settings,activePetId:'ui-p'}};const ue=makeEpisode('ui-p','UI episode',new Date(Date.now()-24*36e5).toISOString());ue.id='ui-e';ue.trackingMode='live';state.episodes=[ue];state.settings.activeEpisodeId='ui-e';state.observations=[{id:'ui-old',episodeId:'ui-e',findingId:'cough',status:'present',present:true,time:'2015-09-26T23:40:00Z',severity:'medium',confidence:'high',notes:''}];`);
+const compactQueueHtml=run(`renderMonitoringQueue(monitoringCandidates().slice(0,1),{compact:true})`);assert(compactQueueHtml.includes('monitor-list compact'),'compact dashboard monitoring queue has dedicated stacked-layout hook');
+const uiDash=run(`renderDashboard()`);assert(uiDash.includes('Check episode dates.'),'dashboard surfaces temporal integrity warning when evidence predates episode start');assert(uiDash.includes('Evidence begins')&&uiDash.includes('2015'),'historical timestamp displays its year');
+console.log('PASS v0.10.1 compact monitoring layout hook and temporal-integrity dashboard warning');

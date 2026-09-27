@@ -1,10 +1,10 @@
-# Bayesian Symptom Tracker v0.10.0 — Validation Record
+# Bayesian Symptom Tracker v0.10.1 — Validation Record
 
 Date: 2026-09-27
 
 ## Release purpose
 
-v0.10.0 adds an explicit **Differential Workup / clinical narrowing** layer without changing the v0.7 feline knowledge pack, disease priors, condition likelihoods, temporal weighting, quantitative clinical weighting, or dependency/correlation settings.
+v0.10.1 is a dashboard/date-integrity point release on top of the v0.10 Differential Workup architecture. It does not change the v0.7 feline knowledge pack, disease priors, condition likelihoods, temporal weighting, quantitative clinical weighting, or dependency/correlation settings.
 
 The purpose of the new layer is to preserve the real diagnostic journey — conditions considered, made less likely, ruled out, supported, confirmed, or ultimately established — while keeping clinician-entered narrowing decisions distinguishable from the Bayesian model's own ranking.
 
@@ -17,8 +17,25 @@ Passed:
 - `node tests/state-smoke.mjs`
 - `python -m json.tool data/cat-knowledge-v0.7.json`
 - GitHub Pages relative/local asset inspection
-- service-worker cache key bumped to `bst-v10-0`
+- service-worker cache key bumped to `bst-v10-1`
 - state migration bumped to schema 10
+
+
+## v0.10.1 dashboard/date-integrity hotfix
+
+This point release does **not** change priors, likelihoods, clinical multipliers, temporal evidence weights, correlation discounts, or any other Bayesian inference parameter.
+
+Additional checks verify that:
+
+- compact Dashboard reassessment cards emit a dedicated stacked-layout hook so their action buttons cannot crush the prompt text into a narrow column
+- the Dashboard's **Episode Duration** uses the explicit episode start rather than silently substituting the earliest evidence timestamp
+- evidence that predates the recorded episode start raises an explicit temporal-integrity warning instead of only producing an implausibly large duration
+- timestamps outside the current calendar year display their year, reducing ambiguity during retrospective reconstruction
+- the service-worker cache key is bumped so GitHub Pages clients receive the CSS/JS hotfix
+
+## Rendering note
+
+The dashboard hotfix was validated through application-side HTML generation and regression assertions. A fresh Chromium screenshot attempt in the container stalled at the Chromium process level, so this release does not claim a new interactive-browser screenshot.
 
 ## Core inference regression coverage
 
@@ -122,7 +139,7 @@ Tests verify that:
 
 The user's historical diabetes case remains an **audit case**, not a target-answer regression test. No assertion requires diabetes, CKD, or any other condition to rank first.
 
-v0.10.0 does not change the knowledge-pack likelihoods, priors, temporal weights, or quantitative clinical evidence model. Therefore, **when no differential-workup constraints are added**, the underlying evidence-model ranking is expected to remain the same as v0.9 for the same saved case and replay scope. The workup layer can only modify the separately identified combined differential when the user explicitly enables a mapped constraint.
+v0.10.1 does not change the knowledge-pack likelihoods, priors, temporal weights, or quantitative clinical evidence model. Therefore, **when no differential-workup constraints are added**, the underlying evidence-model ranking is expected to remain the same as v0.9 for the same saved case and replay scope. The workup layer can only modify the separately identified combined differential when the user explicitly enables a mapped constraint.
 
 The known outcome is never inserted as an automatic workup constraint.
 
@@ -134,7 +151,7 @@ A v0.10 Differential-workup static render is generated from the actual `renderDi
 
 ## Remaining scientific/model work
 
-v0.10.0 remains an experimental inference framework and is **not clinically validated**. Important remaining work includes:
+v0.10.1 remains an experimental inference framework and is **not clinically validated**. Important remaining work includes:
 
 - calibration against a much larger blinded veterinary case library
 - source-backed test-specific likelihood ratios/distributions where defensible

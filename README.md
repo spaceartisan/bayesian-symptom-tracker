@@ -1,4 +1,12 @@
-# Bayesian Symptom Tracker v0.10.0
+# Bayesian Symptom Tracker v0.10.1
+
+## v0.10.1 hotfix
+
+- Fixed the Dashboard compact reassessment card so action buttons no longer crush monitoring text into a narrow column.
+- Episode Duration now uses the explicit episode start rather than silently relabeling the earliest evidence timestamp as the episode start.
+- Dashboard warns when evidence predates the recorded episode start or a live episode spans more than one year.
+- Historical timestamps now include the year when they are outside the current calendar year.
+- These changes are display/data-integrity guidance only; Bayesian likelihoods and condition weights are unchanged.
 
 A local-first, GitHub Pages–compatible feline longitudinal health record and transparent Bayesian differential-pattern tracker.
 
@@ -270,7 +278,7 @@ Diagnostic studies retain ultrasound, radiograph, echocardiogram, CT/MRI, cytolo
 
 Diet records retain food form, product, date range, moisture, protein, fat, fiber, carbohydrate, phosphorus, nutrient basis, amount, and source.
 
-These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential in v0.10.0. Differential-workup milestones are stored separately and affect the combined differential only when the user explicitly enables a mapped clinical constraint.
+These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential in v0.10.1. Differential-workup milestones are stored separately and affect the combined differential only when the user explicitly enables a mapped clinical constraint.
 
 ## Urgency rules
 
@@ -311,7 +319,7 @@ Reports can optionally include the Bayesian model, urgency history, clinical res
 
 ## Migration
 
-v0.10.0 migrates earlier state automatically to **state schema 10**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, reference outcomes, settings, linked history, replay configuration, and validation settings are preserved.
+v0.10.1 migrates earlier state automatically to **state schema 10**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, reference outcomes, settings, linked history, replay configuration, and validation settings are preserved.
 
 The new longitudinal record type is:
 
