@@ -1,12 +1,32 @@
-# Bayesian Symptom Tracker v0.10.1
+# Bayesian Symptom Tracker v0.10.3
 
-## v0.10.1 hotfix
+## v0.10.3 PWA / installable app
 
-- Fixed the Dashboard compact reassessment card so action buttons no longer crush monitoring text into a narrow column.
-- Episode Duration now uses the explicit episode start rather than silently relabeling the earliest evidence timestamp as the episode start.
-- Dashboard warns when evidence predates the recorded episode start or a live episode spans more than one year.
-- Historical timestamps now include the year when they are outside the current calendar year.
-- These changes are display/data-integrity guidance only; Bayesian likelihoods and condition weights are unchanged.
+- Completed the Progressive Web App packaging for GitHub Pages.
+- Added installable 192×192 and 512×512 PNG icons, a maskable 512×512 icon, favicon, and Apple touch icon.
+- Expanded `manifest.webmanifest` with `id`, `scope`, app description, categories, orientation, language, standalone display, and icon declarations.
+- Added Apple/iOS web-app metadata and touch icon links to `index.html`.
+- Upgraded the service worker cache to `bst-v10-3`, precaching the app shell, knowledge pack, manifest, and icons with navigation fallback for offline launches.
+- Added a Settings → **Install this app** card. Chromium-based browsers can use the native install prompt when available; iPhone/iPad users are directed to **Share → Add to Home Screen**.
+- All paths remain relative so installation works from a GitHub Pages project subdirectory such as `/bayesian-symptom-tracker/`.
+- The Settings page includes an install surface rather than relying only on the browser address-bar icon.
+
+### Installing from GitHub Pages
+
+- **Chrome / Edge / Android:** open **Settings → Install this app** and use the native install prompt when offered. The browser menu's **Install app** / **Add to Home screen** option also works.
+- **iPhone / iPad:** open the site in Safari, tap **Share**, then **Add to Home Screen**. iOS does not expose the same `beforeinstallprompt` API used by Chromium browsers.
+- Installed copies still use the same local IndexedDB store for that browser profile. Export JSON backups before clearing browser/site data or moving devices.
+
+## v0.10.2 structured diagnostic findings
+
+- Confirmed that **Pleural effusion** was already present as a model hypothesis, but it was not available as a loggable clinical/imaging finding.
+- Added **Pleural effusion identified** as an explicit structured diagnostic-study finding.
+- Diagnostic studies now support an optional structured finding, status, confidence, and explicit **Use in model** control. Free-text study interpretation remains context-only and is never parsed automatically.
+- A present structured pleural-effusion finding can contribute to the pleural-effusion syndrome hypothesis and source-backed related differentials such as CHF/HCM, FIP, and systemic lymphoma; absent/negative study findings remain stored but are not automatically treated as rule-outs.
+- Added condition-library search so named hypotheses such as Pleural effusion are easier to locate.
+- Added a Log Observation shortcut explaining that veterinarian/imaging/pathology findings belong under **Clinical & context → Diagnostic studies**.
+- Knowledge pack advanced to `cat-practical-differentials-v0.8`; state schema remains 10.
+
 
 A local-first, GitHub Pages–compatible feline longitudinal health record and transparent Bayesian differential-pattern tracker.
 
@@ -25,13 +45,25 @@ This project is intentionally **not a casual symptom checker**. It is designed t
 
 The inference pipeline is:
 
-`raw longitudinal records → temporal/quantitative summaries → dependency-aware evidence → prior/history context → relative Bayesian pattern scores`
+`raw longitudinal records → temporal/quantitative + explicitly selected structured-study summaries → dependency-aware evidence → prior/history context → relative Bayesian pattern scores`
 
 The monitoring pipeline is separate:
 
 `raw observations → current symptom/state summary → elapsed time + uncertainty + discriminatory value → reassessment queue`
 
 
+
+## Structured diagnostic-study findings
+
+Diagnostic studies remain narrative records by default. v0.10.2 adds an opt-in structured layer for findings that can be represented without parsing free text.
+
+The first supported structured imaging finding is **Pleural effusion identified**. Record it under **Clinical & context → Diagnostic studies** (for example radiograph, ultrasound, CT, thoracocentesis/fluid analysis, or another study), keep the actual report text in the summary, and select whether the structured finding should enter the Bayesian model.
+
+This is deliberately distinct from the existing **Pleural effusion** hypothesis. The finding means that pleural fluid was identified; the hypothesis is one item in the model's differential/syndromic library. The same observed effusion can also support plausible underlying causes.
+
+Free text is never converted to evidence automatically. A study must have an explicitly selected supported finding, `Present / identified` status, and the **Use in model** box enabled. `Not identified` and `Indeterminate` are retained as historical data but are not automatically used as Bayesian rule-outs.
+
+The initial v0.8 pleural-effusion associations are anchored to Cornell and Merck references documenting feline pleural effusion and common associated causes, but the numerical weights remain experimental heuristic pattern weights rather than calibrated diagnostic likelihood ratios.
 
 ## v0.10 differential workup and clinical narrowing
 
@@ -278,7 +310,7 @@ Diagnostic studies retain ultrasound, radiograph, echocardiogram, CT/MRI, cytolo
 
 Diet records retain food form, product, date range, moisture, protein, fat, fiber, carbohydrate, phosphorus, nutrient basis, amount, and source.
 
-These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential in v0.10.1. Differential-workup milestones are stored separately and affect the combined differential only when the user explicitly enables a mapped clinical constraint.
+These records are preserved as context. Treatment response, free-text studies, and diet do not silently change the differential. Explicitly selected supported structured-study findings are the only study-derived items that can enter inference. Differential-workup milestones are stored separately and affect the combined differential only when the user explicitly enables a mapped clinical constraint.
 
 ## Urgency rules
 
@@ -319,7 +351,7 @@ Reports can optionally include the Bayesian model, urgency history, clinical res
 
 ## Migration
 
-v0.10.1 migrates earlier state automatically to **state schema 10**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, reference outcomes, settings, linked history, replay configuration, and validation settings are preserved.
+v0.10.2 migrates earlier state automatically to **state schema 10**. Existing pets, episodes, observations, clinical measurements, diets, diagnoses, treatments, studies, reference outcomes, settings, linked history, replay configuration, and validation settings are preserved.
 
 The new longitudinal record type is:
 

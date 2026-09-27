@@ -1,6 +1,6 @@
 import fs from 'node:fs';import vm from 'node:vm';import crypto from 'node:crypto';
 const assert=(c,m)=>{if(!c)throw new Error(m)};
-const k=JSON.parse(fs.readFileSync(new URL('../data/cat-knowledge-v0.7.json',import.meta.url),'utf8'));
+const k=JSON.parse(fs.readFileSync(new URL('../data/cat-knowledge-v0.8.json',import.meta.url),'utf8'));
 const ids=new Set(k.findings.map(f=>f.id)), hids=new Set(k.hypotheses.map(h=>h.id)), src=new Set(k.sources.map(s=>s.id));
 assert(k.schemaVersion===7,'knowledge schema v7');assert(k.monitoringConfig?.stateRecheckHours>0,'monitoring config present');assert(k.findings.filter(f=>f.sourceType!=='clinical').every(f=>f.monitoringClass),'owner findings have monitoring metadata');assert(k.hypotheses.length>=90,'broad condition library');assert(hids.has('other_unmodeled'),'reserve hypothesis');assert(k.coverage.findingCount===k.findings.length,'coverage finding count');assert(k.coverage.conditionCount===k.hypotheses.length,'coverage condition count');
 for(const h of k.hypotheses)for(const sid of h.sourceRefs||[])assert(src.has(sid),`bad source ${sid}`);
@@ -8,6 +8,9 @@ for(const [hid,rs] of Object.entries(k.riskModifiers||{})){assert(hids.has(hid),
 for(const t of k.measurementTemplates||[])if(t.quantitativeAnchor)assert(src.has(t.quantitativeAnchor.sourceRef),`anchor source ${t.id}`);
 for(const t of k.measurementTemplates||[])if(t.trendSourceRef)assert(src.has(t.trendSourceRef),`trend source ${t.id}`);
 assert(k.findings.some(f=>f.id==='creatinine_rising'),'creatinine trend finding');assert(k.findings.some(f=>f.id==='sdma_rising'),'sdma trend finding');
+assert(k.findings.some(f=>f.id==='pleural_effusion_identified'&&f.studyEligible),'pleural effusion structured study finding');
+assert((k.likelihoods.pleural_effusion||{}).pleural_effusion_identified>.9,'pleural effusion finding strongly maps to pleural-effusion hypothesis');
+
 
 let code=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/\ninit\(\);\s*$/,'\n');
 const ctx={console,crypto:crypto.webcrypto,setTimeout,clearTimeout,structuredClone,Intl,Date,Math,JSON,Map,Set,URL,Blob};vm.createContext(ctx);vm.runInContext(code,ctx,{filename:'app.js'});
@@ -50,9 +53,16 @@ const mq2=run(`monitoringCandidates()`);assert(mq2.some(x=>x.finding.id==='vomit
 const scoreBefore=run(`infer().map(x=>x.score).join(',')`);run(`state.episodes[0].monitoringCadence='intensive';`);const intensive=run(`monitoringCadenceHours(finding('appetite_normal'),state.observations.find(x=>x.id==='an'))`);run(`state.episodes[0].monitoringCadence='sparse';`);const sparse=run(`monitoringCadenceHours(finding('appetite_normal'),state.observations.find(x=>x.id==='an'))`);const scoreAfter=run(`infer().map(x=>x.score).join(',')`);assert(intensive<sparse,'cadence changes reassessment density');assert(scoreBefore===scoreAfter,'monitoring cadence is non-inferential');run(`state.episodes[0].entryDateMode='latest_evidence';`);const scoreDateMode=run(`infer().map(x=>x.score).join(',')`);assert(scoreAfter===scoreDateMode,'entry date default is non-inferential');
 // New-information queue does not ask contradictory siblings after a state group has been observed.
 const newQs=run(`newObservationCandidates(200)`);assert(!newQs.some(x=>x.finding.stateGroup==='appetite_state'),'recorded state group excluded from new-question queue');
+// Structured diagnostic findings are opt-in evidence; narrative studies remain context-only.
+run(`state.observations=[];state.clinicalMeasurements=[];state.studies=[{id:'pe',petId:state.settings.activePetId,episodeId:state.settings.activeEpisodeId,type:'radiograph',bodySite:'thorax',time:'2026-01-10T00:00:00Z',interpretation:'abnormal',source:'radiologist',findingId:'pleural_effusion_identified',findingStatus:'present',confidence:'high',useInModel:false,summary:'Pleural fluid present',notes:''}];`);
+const studyBase=run(`infer().find(x=>x.id==='pleural_effusion').score`);assert(run(`studyEvidence().length`)===0,'structured study is context-only until enabled');
+run(`state.studies[0].useInModel=true`);const se=run(`studyEvidence()`);assert(se.length===1&&se[0].findingId==='pleural_effusion_identified','structured pleural-effusion study becomes evidence when enabled');const studyBoost=run(`infer().find(x=>x.id==='pleural_effusion').score`);assert(studyBoost>studyBase,'structured pleural-effusion study raises matching hypothesis');
+run(`state.studies[0].findingStatus='absent'`);assert(run(`studyEvidence().length`)===0,'absent structured study finding is retained but not auto-used as rule-out');
+const studyHtml=run(`studyFormHtml(null)`);assert(studyHtml.includes('Pleural effusion identified')&&studyHtml.includes('Use the selected structured finding'),'study form exposes pleural effusion and explicit evidence opt-in');
+
 // Current urgency remains deterministic.
 run(`state.observations=[{id:'u',episodeId:state.settings.activeEpisodeId,findingId:'urine_none',status:'present',present:true,time:new Date().toISOString(),severity:'high',confidence:'high',notes:''}];`);assert(run(`urgencyAlerts().some(a=>a.level==='emergency')`),'urinary emergency rule');
-console.log('PASS v0.10.1 app with v0.7 knowledge integrity and provenance');
+console.log('PASS v0.10.3 app with v0.8 knowledge integrity, structured study evidence, and PWA hooks');
 console.log('PASS broad canonical condition scenarios');
 console.log('PASS longitudinal temporal aggregation, resolution, and state transitions');
 console.log('PASS quantitative clinical evidence weighting and trend derivation');

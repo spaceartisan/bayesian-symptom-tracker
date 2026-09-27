@@ -1,12 +1,25 @@
-# Bayesian Symptom Tracker v0.10.1 — Validation Record
+# Bayesian Symptom Tracker v0.10.3 — Validation Record
 
 Date: 2026-09-27
 
 ## Release purpose
 
-v0.10.1 is a dashboard/date-integrity point release on top of the v0.10 Differential Workup architecture. It does not change the v0.7 feline knowledge pack, disease priors, condition likelihoods, temporal weighting, quantitative clinical weighting, or dependency/correlation settings.
+v0.10.3 completes the Progressive Web App packaging so the GitHub Pages deployment is installable on supported desktop and mobile browsers while preserving local-first IndexedDB behavior. No Bayesian inference parameters, knowledge-pack mappings, or state schema values change in this release.
 
-The purpose of the new layer is to preserve the real diagnostic journey — conditions considered, made less likely, ruled out, supported, confirmed, or ultimately established — while keeping clinician-entered narrowing decisions distinguishable from the Bayesian model's own ranking.
+
+## v0.10.3 PWA validation
+
+Passed:
+
+- `manifest.webmanifest` parses as valid JSON and contains GitHub Pages-safe relative `id`, `start_url`, and `scope` values
+- 192×192 and 512×512 install icons exist with declared dimensions
+- a 512×512 maskable icon exists and is declared with `purpose: maskable`
+- Apple touch icon and 32×32 favicon exist
+- `index.html` links the manifest, favicon, Apple touch icon, theme color, and standalone-capable metadata
+- service-worker cache key advanced to `bst-v10-3` and precaches the manifest/icons along with the existing offline shell
+- service-worker navigation fallback remains scoped to the GitHub Pages project path
+- Settings renders an install card and binds the install action without changing application state or Bayesian inference
+- app version advanced to `0.10.3`; state schema remains 10 and knowledge pack remains `cat-practical-differentials-v0.8`
 
 ## Static validation
 
@@ -15,11 +28,29 @@ Passed:
 - `node --check app.js`
 - `node tests/smoke.mjs`
 - `node tests/state-smoke.mjs`
-- `python -m json.tool data/cat-knowledge-v0.7.json`
+- `python tests/pwa-smoke.py`
+- `python -m json.tool data/cat-knowledge-v0.8.json`
 - GitHub Pages relative/local asset inspection
-- service-worker cache key bumped to `bst-v10-1`
+- service-worker cache key bumped to `bst-v10-3`
 - state migration bumped to schema 10
 
+
+## v0.10.2 structured diagnostic-study evidence
+
+New regression checks verify that:
+
+- `Pleural effusion identified` exists as a clinical/imaging finding distinct from the `Pleural effusion` hypothesis
+- the structured finding is discoverable in the Diagnostic Study form
+- a narrative diagnostic study remains non-inferential by default
+- a structured finding remains non-inferential until the user explicitly enables **Use in model**
+- a present, enabled pleural-effusion study creates one structured-study evidence item
+- the matching Pleural effusion hypothesis rises when that evidence is enabled
+- `Not identified` does not silently become negative Bayesian evidence
+- repeated structured-study records are summarized rather than multiplied as independent evidence
+- the Model page includes a condition-library search hook so Pleural effusion is directly discoverable
+- linked historical structured-study findings enter only through explicit linked-history logic and at reduced historical weight
+
+The knowledge-pack mapping uses source-backed qualitative associations from Cornell's feline lung/pleural-effusion guidance and the Merck Veterinary Manual's feline chest-cavity guidance. Numerical weights remain heuristic and unvalidated.
 
 ## v0.10.1 dashboard/date-integrity hotfix
 
@@ -139,7 +170,7 @@ Tests verify that:
 
 The user's historical diabetes case remains an **audit case**, not a target-answer regression test. No assertion requires diabetes, CKD, or any other condition to rank first.
 
-v0.10.1 does not change the knowledge-pack likelihoods, priors, temporal weights, or quantitative clinical evidence model. Therefore, **when no differential-workup constraints are added**, the underlying evidence-model ranking is expected to remain the same as v0.9 for the same saved case and replay scope. The workup layer can only modify the separately identified combined differential when the user explicitly enables a mapped constraint.
+v0.10.2 changes only the new structured-study finding path and the specific source-backed pleural-effusion associations in knowledge pack v0.8. Existing v0.7 owner-observation, lab, trend, prior, temporal, and workup weights are otherwise unchanged. Therefore, **when no differential-workup constraints are added**, the underlying evidence-model ranking is expected to remain the same as v0.9 for the same saved case and replay scope. The workup layer can only modify the separately identified combined differential when the user explicitly enables a mapped constraint.
 
 The known outcome is never inserted as an automatic workup constraint.
 
@@ -151,7 +182,7 @@ A v0.10 Differential-workup static render is generated from the actual `renderDi
 
 ## Remaining scientific/model work
 
-v0.10.1 remains an experimental inference framework and is **not clinically validated**. Important remaining work includes:
+v0.10.2 remains an experimental inference framework and is **not clinically validated**. Important remaining work includes:
 
 - calibration against a much larger blinded veterinary case library
 - source-backed test-specific likelihood ratios/distributions where defensible
